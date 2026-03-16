@@ -438,6 +438,8 @@ export type Database = {
           dpa_accepted_at: string | null
           dpa_version: string | null
           id: string
+          max_bestyrelsesmedlemmer: number | null
+          max_suppleanter: number | null
           name: string
           plan: string
           stripe_customer_id: string | null
@@ -451,6 +453,8 @@ export type Database = {
           dpa_accepted_at?: string | null
           dpa_version?: string | null
           id?: string
+          max_bestyrelsesmedlemmer?: number | null
+          max_suppleanter?: number | null
           name: string
           plan?: string
           stripe_customer_id?: string | null
@@ -464,6 +468,8 @@ export type Database = {
           dpa_accepted_at?: string | null
           dpa_version?: string | null
           id?: string
+          max_bestyrelsesmedlemmer?: number | null
+          max_suppleanter?: number | null
           name?: string
           plan?: string
           stripe_customer_id?: string | null
