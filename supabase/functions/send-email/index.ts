@@ -138,7 +138,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
     Regnskabsdokumenter opbevares dog i 5 år jf. Bogføringsloven.
   </p>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 0;">
-    Fortrød du? Kontakt os på <a href="mailto:support@bestyrelsesrum.dk" style="color:#1e40af;">support@bestyrelsesrum.dk</a> inden ${data.deletionDate}.
+    Fortrød du? Kontakt os på <a href="mailto:support@vedtægt.dk" style="color:#1e40af;">support@vedtægt.dk</a> inden ${data.deletionDate}.
   </p>
 </div>
 </body></html>`,
