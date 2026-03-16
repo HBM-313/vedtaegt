@@ -124,16 +124,26 @@ function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!collapsed ? (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-sidebar-foreground truncate">{memberName || "Bruger"}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleLogout}>
+          <div className="space-y-2">
+            <NavLink to="/profil" className="flex items-center gap-2 text-xs text-sidebar-foreground hover:text-sidebar-primary transition-colors" activeClassName="text-sidebar-primary font-medium">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate">{memberName || "Min profil"}</span>
+            </NavLink>
+            <div className="flex justify-end">
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleLogout}>
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2 flex flex-col items-center">
+            <NavLink to="/profil" className="hover:text-sidebar-primary" activeClassName="text-sidebar-primary">
+              <User className="h-3.5 w-3.5" />
+            </NavLink>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleLogout}>
               <LogOut className="h-3.5 w-3.5" />
             </Button>
           </div>
-        ) : (
-          <Button variant="ghost" size="icon" className="h-7 w-7 mx-auto" onClick={handleLogout}>
-            <LogOut className="h-3.5 w-3.5" />
-          </Button>
         )}
       </SidebarFooter>
     </Sidebar>
