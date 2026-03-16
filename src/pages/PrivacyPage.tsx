@@ -21,8 +21,8 @@ const PrivacyPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">Hvem er vi?</h2>
         <div className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>Bestyrelsesrum ApS er dataansvarlig for behandlingen af de personoplysninger, som vi modtager om dig.</p>
-          <p><strong className="text-foreground">Kontakt:</strong> privatliv@bestyrelsesrum.dk</p>
+          <p>Vedtægt ApS er dataansvarlig for behandlingen af de personoplysninger, som vi modtager om dig.</p>
+          <p><strong className="text-foreground">Kontakt:</strong> privatliv@vedtægt.dk</p>
           <p><strong className="text-foreground">Adresse:</strong> Nørregade 12, 1165 København K</p>
           <p><strong className="text-foreground">CVR:</strong> 12345678</p>
         </div>
