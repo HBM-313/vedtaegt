@@ -115,10 +115,14 @@ const PermissionSettings = () => {
 
   const hasUnsaved = original && pending ? !deepEqual(original, pending) : false;
 
-  // Block navigation with unsaved changes
-  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
-    hasUnsaved && currentLocation.pathname !== nextLocation.pathname
-  );
+  // Warn on browser close/refresh with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsaved) { e.preventDefault(); }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsaved]);
 
   // Load permissions from context or fetch
   const loadPermissions = useCallback(async () => {
