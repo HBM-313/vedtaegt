@@ -84,7 +84,7 @@ const OrgSettings = () => {
     const [orgRes, meetingsRes, membersRes, docsRes] = await Promise.all([
       supabase.from("organizations").select("*").eq("id", orgId).single(),
       supabase.from("meetings").select("id").eq("org_id", orgId).gte("created_at", `${new Date().getFullYear()}-01-01`),
-      supabase.from("members").select("id").eq("org_id", orgId),
+      supabase.from("members").select("id, role").eq("org_id", orgId),
       supabase.from("documents").select("file_size_bytes").eq("org_id", orgId),
     ]);
 
@@ -93,6 +93,19 @@ const OrgSettings = () => {
       setOrg(o);
       setName(o.name);
       setCvr(o.cvr || "");
+      setMaxBestyrelse((o as any).max_bestyrelsesmedlemmer ?? 5);
+      setMaxSuppleanter((o as any).max_suppleanter ?? 2);
+    }
+
+    if (membersRes.data) {
+      const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => {
+        acc[m.role] = (acc[m.role] || 0) + 1;
+        return acc;
+      }, {});
+      setBoardCounts({
+        bestyrelsesmedlem: counts["bestyrelsesmedlem"] || 0,
+        suppleant: counts["suppleant"] || 0,
+      });
     }
 
     const totalBytes = docsRes.data?.reduce((sum, d) => sum + (d.file_size_bytes || 0), 0) || 0;
