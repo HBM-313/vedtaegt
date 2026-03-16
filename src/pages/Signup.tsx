@@ -81,6 +81,18 @@ const Signup = () => {
       // If session exists, user is auto-confirmed — proceed
       // If not, user needs to verify email first
       if (!authData.session) {
+        // Store pending signup data so org+member can be created after email confirmation
+        localStorage.setItem(
+          "vedtaegt_pending_signup",
+          JSON.stringify({
+            userId: authData.user.id,
+            name: name.trim(),
+            email,
+            orgName: orgName.trim(),
+            cvr: cvr || null,
+            marketingConsent,
+          })
+        );
         toast.success("Bekræftelsesmail sendt! Tjek din indbakke for at aktivere din konto.");
         setLoading(false);
         return;
