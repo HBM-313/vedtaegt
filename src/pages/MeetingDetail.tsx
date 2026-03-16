@@ -224,11 +224,12 @@ const MeetingDetail = () => {
     setReminderLoading(true);
     try {
       const pending = approvals.filter((a) => a.status === "afventer");
-      // Re-fetch tokens for pending ones
+      // Re-fetch tokens for pending ones, excluding sender
       const { data: pendingWithTokens } = await supabase.from("approvals")
         .select("id, token, member_id, members!approvals_member_id_fkey(name, email)")
         .eq("meeting_id", id!)
-        .eq("status", "afventer");
+        .eq("status", "afventer")
+        .neq("member_id", meeting?.sendt_af || "");
 
       if (!pendingWithTokens) throw new Error("Ingen afventende godkendelser.");
 
