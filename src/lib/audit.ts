@@ -19,13 +19,13 @@ export async function logAuditEvent(
 
   if (!member) return;
 
-  await supabase.from("audit_events").insert({
+  await supabase.from("audit_events").insert([{
     org_id: member.org_id,
     user_id: user.id,
     action,
     resource_type: resourceType,
     resource_id: resourceId,
-    metadata,
+    metadata: metadata as Record<string, unknown>,
     ip_address: "client-side",
-  });
+  }]);
 }
