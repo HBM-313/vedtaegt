@@ -180,12 +180,19 @@ const CreateMeeting = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleSubmit — orgId:", orgId, "memberId:", memberId);
     if (!title.trim()) {
       toast.error("Mødets titel er påkrævet.");
       return;
     }
-    if (!orgId || !memberId) {
-      toast.error("Organisationsdata mangler.");
+    if (!orgId) {
+      console.error("orgId mangler — tjek OrganizationContext");
+      toast.error("Organisationsdata mangler — prøv at genindlæse siden.");
+      return;
+    }
+    if (!memberId) {
+      console.error("memberId mangler — member ikke fundet for denne bruger");
+      toast.error("Brugerdata mangler — prøv at genindlæse siden.");
       return;
     }
 
