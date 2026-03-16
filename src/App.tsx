@@ -53,6 +53,9 @@ const App = () => (
           <Route path="/moeder/:id" element={<ProtectedLayout><MeetingDetail /></ProtectedLayout>} />
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
           <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
+          <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/overdrag-ejerskab/:token" element={<ProtectedLayout><OwnershipTransfer /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
