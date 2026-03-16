@@ -71,7 +71,7 @@ const TeamSettings = () => {
     setLoading(true);
     const [membersRes, orgRes] = await Promise.all([
       supabase.from("members")
-        .select("id, name, email, role, user_id, joined_at, invited_at, er_fravaerende, fravaerende_siden")
+        .select("id, name, email, role, user_id, joined_at, invited_at, er_fravaerende, fravaerende_siden, telefon, adresse, postnummer, by, foedselsdato, email_bekraeftet")
         .eq("org_id", orgId).order("created_at", { ascending: true }),
       supabase.from("organizations")
         .select("max_bestyrelsesmedlemmer, max_suppleanter")
