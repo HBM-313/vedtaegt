@@ -86,6 +86,11 @@ const OrgSettings = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Block page if no permission (after all hooks)
+  if (perms.loaded && !perms.kanSeIndstillinger) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const handleSave = async () => {
     if (!orgId) return;
     if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse til at redigere foreningsoplysninger."); return; }
