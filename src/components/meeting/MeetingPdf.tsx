@@ -54,11 +54,12 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
   useEffect(() => {
     const load = async () => {
-      const [agendaRes, minutesRes, actionsRes, approvalsRes] = await Promise.all([
+      const [agendaRes, minutesRes, actionsRes, approvalsRes, docsRes] = await Promise.all([
         supabase.from("agenda_items").select("title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
         supabase.from("minutes").select("content").eq("meeting_id", meeting.id).maybeSingle(),
         supabase.from("action_items").select("title, due_date, members!action_items_assigned_to_fkey(name)").eq("meeting_id", meeting.id),
         supabase.from("approvals").select("approved_at, status, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id).eq("status", "godkendt"),
+        supabase.from("documents").select("name, category, created_at, uploaded_by, agenda_item_id, members!documents_uploaded_by_fkey(name), agenda_items!documents_agenda_item_id_fkey(title)").eq("meeting_id", meeting.id),
       ]);
 
       let mc: Record<string, string> = {};
@@ -67,6 +68,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
       }
 
       const approvalData = (approvalsRes.data || []) as any[];
+      const docsData = (docsRes.data || []) as any[];
       setData({
         agendaItems: (agendaRes.data || []) as any,
         minutesContent: mc,
@@ -83,6 +85,13 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           name: a.members?.name || "Ukendt",
           role: a.members?.role || "",
           approved_at: a.approved_at,
+        })),
+        documents: docsData.map((d: any) => ({
+          name: d.name,
+          category: d.category,
+          uploader: d.members?.name || "Ukendt",
+          created_at: d.created_at,
+          agenda_item_title: d.agenda_items?.title || null,
         })),
       });
     };
