@@ -141,6 +141,7 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
+  const navigate = useNavigate();
   const [orgData, setOrgData] = useState<OrgContextType>({
     orgId: null,
     orgName: null,
@@ -149,6 +150,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     memberRole: null,
     userId: null,
   });
+  const [contextError, setContextError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOrg = async () => {
@@ -156,6 +158,69 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Check if there's pending signup data to finalize
+      const pendingRaw = localStorage.getItem("vedtaegt_pending_signup");
+      if (pendingRaw) {
+        try {
+          const pending = JSON.parse(pendingRaw);
+          // Only process if it matches the current user
+          if (pending.userId === user.id || pending.email === user.email) {
+            console.log("Completing pending signup for user:", user.id);
+
+            // Check if org+member already exist
+            const { data: existingMember } = await supabase
+              .from("members")
+              .select("id")
+              .eq("user_id", user.id)
+              .maybeSingle();
+
+            if (!existingMember) {
+              // Create organization
+              const { data: org, error: orgError } = await supabase
+                .from("organizations")
+                .insert({
+                  name: pending.orgName,
+                  cvr: pending.cvr,
+                  plan: "free",
+                  dpa_accepted_at: new Date().toISOString(),
+                  dpa_version: "1.0",
+                })
+                .select()
+                .single();
+
+              if (orgError) {
+                console.error("Failed to create org from pending signup:", orgError);
+              } else {
+                // Create member
+                const now = new Date().toISOString();
+                const { error: memberError } = await supabase
+                  .from("members")
+                  .insert({
+                    org_id: org.id,
+                    user_id: user.id,
+                    role: "owner",
+                    name: pending.name,
+                    email: pending.email || user.email,
+                    joined_at: now,
+                    marketing_consent: pending.marketingConsent || false,
+                    marketing_consent_at: pending.marketingConsent ? now : null,
+                  });
+
+                if (memberError) {
+                  console.error("Failed to create member from pending signup:", memberError);
+                } else {
+                  console.log("Pending signup completed successfully");
+                }
+              }
+            }
+            localStorage.removeItem("vedtaegt_pending_signup");
+          }
+        } catch (err) {
+          console.error("Error processing pending signup:", err);
+          localStorage.removeItem("vedtaegt_pending_signup");
+        }
+      }
 
       const { data: member } = await supabase
         .from("members")
@@ -174,6 +239,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           memberRole: member.role,
           userId: user.id,
         });
+      } else {
+        console.error("No member row found for user:", user.id);
+        setContextError("Din brugerprofil kunne ikke findes. Prøv at logge ud og ind igen.");
       }
     };
     loadOrg();
