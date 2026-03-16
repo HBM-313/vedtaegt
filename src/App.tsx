@@ -46,8 +46,8 @@ const App = () => (
           <Route path="/opret-konto" element={<Signup />} />
           <Route path="/nulstil-adgangskode" element={<ResetPassword />} />
           <Route path="/godkend/:token" element={<ApprovalPage />} />
-          <Route path="/dpa" element={<div>Databehandleraftale</div>} />
-          <Route path="/privatlivspolitik" element={<div>Privatlivspolitik</div>} />
+          <Route path="/dpa" element={<DpaPage />} />
+          <Route path="/privatlivspolitik" element={<PrivacyPage />} />
 
           {/* Protected routes */}
           <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
