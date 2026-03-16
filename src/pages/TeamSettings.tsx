@@ -58,6 +58,7 @@ const TeamSettings = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [removeMember, setRemoveMember] = useState<Member | null>(null);
+  const [detailMember, setDetailMember] = useState<Member | null>(null);
   const [orgLimits, setOrgLimits] = useState({ max_bestyrelsesmedlemmer: 5, max_suppleanter: 2 });
 
   const [inviteEmail, setInviteEmail] = useState("");
