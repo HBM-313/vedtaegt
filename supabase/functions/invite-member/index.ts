@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -46,16 +46,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check caller is member of org
+    // Check caller is member of org with invite permission
     const { data: callerMember } = await supabase
       .from("members")
-      .select("id, role")
+      .select("id, role, name")
       .eq("org_id", org_id)
       .eq("user_id", userId)
       .single();
 
-    if (!callerMember || !["formand", "naestformand"].includes(callerMember.role)) {
+    if (!callerMember) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check permission from role_permissions
+    const { data: permData } = await supabase
+      .from("role_permissions")
+      .select("kan_invitere_medlemmer")
+      .eq("org_id", org_id)
+      .eq("role", callerMember.role)
+      .single();
+
+    if (!permData?.kan_invitere_medlemmer) {
+      return new Response(JSON.stringify({ error: "Du har ikke tilladelse til at invitere medlemmer." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -76,15 +91,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Insert pending member
+    // Generate invitation token
+    const invitationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Insert pending member with invitation token
     const { data: newMember, error: insertError } = await supabase
       .from("members")
       .insert({
         org_id,
         email,
-        name: email.split("@")[0],
-        role: role === "admin" ? "admin" : "member",
+        name: email.split("@")[0], // placeholder until they fill in their name
+        role,
         invited_at: new Date().toISOString(),
+        invitation_token: invitationToken,
+        invitation_token_expires_at: expiresAt,
       })
       .select("id")
       .single();
@@ -96,9 +117,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get org name and caller name for email
+    // Get org name for email
     const { data: orgData } = await supabase.from("organizations").select("name").eq("id", org_id).single();
-    const { data: callerData } = await supabase.from("members").select("name").eq("id", callerMember.id).single();
 
     // Log audit
     await supabase.from("audit_events").insert({
@@ -107,10 +127,10 @@ Deno.serve(async (req) => {
       action: "member.invited",
       resource_type: "member",
       resource_id: newMember.id,
-      metadata: { email, role },
+      metadata: { email, rolle: role },
     });
 
-    // Send invitation email
+    // Send invitation email with token link
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
     await fetch(sendEmailUrl, {
       method: "POST",
@@ -120,8 +140,10 @@ Deno.serve(async (req) => {
         templateName: "invitation",
         templateData: {
           orgName: orgData?.name || "din forening",
-          orgId: org_id,
-          senderName: callerData?.name || "En administrator",
+          senderName: callerMember.name || "Formanden",
+          role,
+          invitationToken,
+          expiresAt,
         },
       }),
     });
@@ -131,7 +153,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

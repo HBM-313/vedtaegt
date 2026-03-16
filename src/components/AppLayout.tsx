@@ -9,7 +9,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield,
+  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User,
 } from "lucide-react";
 import { toast } from "sonner";
 
