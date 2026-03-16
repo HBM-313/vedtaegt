@@ -180,12 +180,19 @@ const CreateMeeting = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handleSubmit — orgId:", orgId, "memberId:", memberId);
     if (!title.trim()) {
       toast.error("Mødets titel er påkrævet.");
       return;
     }
-    if (!orgId || !memberId) {
-      toast.error("Organisationsdata mangler.");
+    if (!orgId) {
+      console.error("orgId mangler — tjek OrganizationContext");
+      toast.error("Organisationsdata mangler — prøv at genindlæse siden.");
+      return;
+    }
+    if (!memberId) {
+      console.error("memberId mangler — member ikke fundet for denne bruger");
+      toast.error("Brugerdata mangler — prøv at genindlæse siden.");
       return;
     }
 
@@ -393,8 +400,8 @@ const CreateMeeting = () => {
 
         {/* Buttons */}
         <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" size="sm" className="press-effect" disabled={loading}>
-            {loading ? "Opretter..." : "Opret møde"}
+          <Button type="submit" size="sm" className="press-effect" disabled={loading || !orgId || !memberId}>
+            {loading ? "Opretter..." : !orgId || !memberId ? "Henter data..." : "Opret møde"}
           </Button>
           <Button
             type="button"

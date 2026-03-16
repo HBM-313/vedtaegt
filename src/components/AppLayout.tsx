@@ -162,7 +162,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         .select("id, org_id, name, role, organizations(name)")
         .eq("user_id", user.id)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (member) {
         const org = member.organizations as unknown as { name: string } | null;
