@@ -55,9 +55,12 @@ Deno.serve(async (req) => {
 
       if (ref > now) continue; // Not yet time
 
+      // Skip sender (they auto-approved)
+      const meetingData = approval.meetings as any;
+      if (meetingData?.sendt_af && approval.member_id === meetingData.sendt_af) continue;
+
       const member = approval.members as any;
-      const meeting = approval.meetings as any;
-      if (!member?.email || !approval.token || !meeting?.title) continue;
+      if (!member?.email || !approval.token || !meetingData?.title) continue;
 
       // Get approval counts for this meeting
       const { data: allApprovals } = await supabase
