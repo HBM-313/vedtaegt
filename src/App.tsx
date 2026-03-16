@@ -19,6 +19,8 @@ import ActionItems from "./pages/ActionItems";
 import TeamSettings from "./pages/TeamSettings";
 import OrgSettings from "./pages/OrgSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
+import DpaPage from "./pages/DpaPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
