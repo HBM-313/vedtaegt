@@ -7,7 +7,7 @@ const PrivacyPage = () => (
       <div className="container flex h-14 items-center">
         <Link to="/" className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold">Bestyrelsesrum</span>
+          <span className="text-base font-semibold">Vedtægt</span>
         </Link>
       </div>
     </header>
