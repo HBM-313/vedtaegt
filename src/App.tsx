@@ -17,6 +17,7 @@ import ApprovalPage from "./pages/ApprovalPage";
 import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
 import TeamSettings from "./pages/TeamSettings";
+import OrgSettings from "./pages/OrgSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
 import NotFound from "./pages/NotFound";
 
@@ -54,7 +55,8 @@ const App = () => (
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
           <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
           <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
-          <Route path="/indstillinger" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger/forening" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/overdrag-ejerskab/:token" element={<ProtectedLayout><OwnershipTransfer /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
