@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     // OR (paamindelse_sendt_at IS NOT NULL AND paamindelse_sendt_at + paamindelse_efter_dage <= now())
     const { data: pendingApprovals, error: queryError } = await supabase
       .from("approvals")
-      .select("id, token, meeting_id, member_id, paamindelse_efter_dage, sendt_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, email), meetings!approvals_meeting_id_fkey(title)")
+      .select("id, token, meeting_id, member_id, paamindelse_efter_dage, sendt_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, email), meetings!approvals_meeting_id_fkey(title, sendt_af)")
       .eq("status", "afventer")
       .not("token", "is", null);
 
@@ -55,9 +55,12 @@ Deno.serve(async (req) => {
 
       if (ref > now) continue; // Not yet time
 
+      // Skip sender (they auto-approved)
+      const meetingData = approval.meetings as any;
+      if (meetingData?.sendt_af && approval.member_id === meetingData.sendt_af) continue;
+
       const member = approval.members as any;
-      const meeting = approval.meetings as any;
-      if (!member?.email || !approval.token || !meeting?.title) continue;
+      if (!member?.email || !approval.token || !meetingData?.title) continue;
 
       // Get approval counts for this meeting
       const { data: allApprovals } = await supabase
@@ -75,7 +78,7 @@ Deno.serve(async (req) => {
           to: member.email,
           templateName: "approval_reminder",
           templateData: {
-            meetingTitle: meeting.title,
+          meetingTitle: meetingData.title,
             token: approval.token,
             recipientName: member.name,
             approvedCount: done,

@@ -18,24 +18,26 @@ import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
 import MeetingPdf from "@/components/meeting/MeetingPdf";
+import InPlatformApproval from "@/components/meeting/InPlatformApproval";
 
 interface Meeting {
   id: string; title: string; meeting_date: string | null;
   location: string | null; status: string | null; approved_at: string | null; org_id: string | null;
   godkendelse_frist_dage: number | null; afvist_af: string | null; afvist_at: string | null;
-  afvist_kommentar: string | null; godkendelse_runde: number | null;
+  afvist_kommentar: string | null; godkendelse_runde: number | null; sendt_af: string | null;
 }
 
 interface ApprovalRow {
   id: string; member_id: string | null; status: string | null;
   approved_at: string | null; paamindelse_sendt_at: string | null;
+  afvist_kommentar: string | null;
   members: { name: string; role: string } | null;
 }
 
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { orgId, orgName } = useOrg();
+  const { orgId, orgName, memberId } = useOrg();
   const perms = usePermissions();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ const MeetingDetail = () => {
     if (!id) return;
     const { data } = await supabase
       .from("approvals")
-      .select("id, member_id, status, approved_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, role)")
+      .select("id, member_id, status, approved_at, paamindelse_sendt_at, afvist_kommentar, members!approvals_member_id_fkey(name, role)")
       .eq("meeting_id", id);
     setApprovals((data || []) as unknown as ApprovalRow[]);
   }, [id]);
@@ -116,6 +118,7 @@ const MeetingDetail = () => {
         afvist_af: null,
         afvist_at: null,
         afvist_kommentar: null,
+        sendt_af: memberId,
       }).eq("id", id);
 
       // Delete existing pending approvals
@@ -138,6 +141,23 @@ const MeetingDetail = () => {
 
       await supabase.from("approvals").insert(newApprovals);
 
+      // Auto-approve sender's own approval
+      if (memberId) {
+        const senderApproval = newApprovals.find(a => a.member_id === memberId);
+        if (senderApproval) {
+          await supabase.from("approvals").update({
+            status: "godkendt",
+            approved_at: new Date().toISOString(),
+          }).eq("meeting_id", id).eq("member_id", memberId).eq("status", "afventer");
+
+          await logAuditEvent("meeting.referat_godkendt", "meeting", id, {
+            member_id: memberId,
+            kilde: "auto_afsender",
+            runde: actualRunde,
+          });
+        }
+      }
+
       // Send emails
       const meetingDate = meeting.meeting_date
         ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
@@ -149,7 +169,7 @@ const MeetingDetail = () => {
 
       for (const approval of newApprovals) {
         const member = members.find((m) => m.id === approval.member_id);
-        if (!member) continue;
+        if (!member || member.id === memberId) continue; // Skip sender
         await supabase.functions.invoke("send-email", {
           body: {
             to: member.email,
@@ -204,11 +224,12 @@ const MeetingDetail = () => {
     setReminderLoading(true);
     try {
       const pending = approvals.filter((a) => a.status === "afventer");
-      // Re-fetch tokens for pending ones
+      // Re-fetch tokens for pending ones, excluding sender
       const { data: pendingWithTokens } = await supabase.from("approvals")
         .select("id, token, member_id, members!approvals_member_id_fkey(name, email)")
         .eq("meeting_id", id!)
-        .eq("status", "afventer");
+        .eq("status", "afventer")
+        .neq("member_id", meeting?.sendt_af || "");
 
       if (!pendingWithTokens) throw new Error("Ingen afventende godkendelser.");
 
@@ -265,7 +286,8 @@ const MeetingDetail = () => {
 
   const approvedCount = approvals.filter((a) => a.status === "godkendt").length;
   const totalCount = approvals.length;
-  const pendingCount = approvals.filter((a) => a.status === "afventer").length;
+  const realPending = approvals.filter((a) => a.status === "afventer" && a.member_id !== meeting.sendt_af);
+  const pendingCount = realPending.length;
 
   return (
     <div>
@@ -302,6 +324,20 @@ const MeetingDetail = () => {
           )}
         </div>
       </div>
+
+      {/* In-platform approval box */}
+      {meeting.status === "pending_approval" && (
+        <InPlatformApproval
+          meetingId={meeting.id}
+          orgId={meeting.org_id!}
+          orgName={orgName || ""}
+          meetingTitle={meeting.title}
+          godkendelseRunde={meeting.godkendelse_runde}
+          currentMemberId={memberId}
+          approvals={approvals}
+          onUpdate={() => { loadMeeting(); loadApprovals(); }}
+        />
+      )}
 
       {/* Rejection banner */}
       {meeting.status === "active" && meeting.afvist_at && meeting.afvist_kommentar && rejector && (
@@ -356,7 +392,9 @@ const MeetingDetail = () => {
                 </div>
                 <span className="text-muted-foreground text-xs">
                   {a.status === "godkendt" && a.approved_at
-                    ? `Godkendt ${formatShortDate(a.approved_at)}`
+                    ? a.member_id === meeting.sendt_af
+                      ? "Godkendt automatisk (afsender)"
+                      : `Godkendt ${formatShortDate(a.approved_at)}`
                     : "Afventer"}
                 </span>
               </div>

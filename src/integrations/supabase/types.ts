@@ -327,6 +327,7 @@ export type Database = {
           location: string | null
           meeting_date: string | null
           org_id: string | null
+          sendt_af: string | null
           status: string | null
           title: string
         }
@@ -343,6 +344,7 @@ export type Database = {
           location?: string | null
           meeting_date?: string | null
           org_id?: string | null
+          sendt_af?: string | null
           status?: string | null
           title: string
         }
@@ -359,6 +361,7 @@ export type Database = {
           location?: string | null
           meeting_date?: string | null
           org_id?: string | null
+          sendt_af?: string | null
           status?: string | null
           title?: string
         }
@@ -382,6 +385,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_sendt_af_fkey"
+            columns: ["sendt_af"]
+            isOneToOne: false
+            referencedRelation: "members"
             referencedColumns: ["id"]
           },
         ]
