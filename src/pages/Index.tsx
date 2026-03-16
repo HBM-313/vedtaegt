@@ -62,7 +62,7 @@ const Index = () => {
             dokumenthåndtering og revisionsspor. Bygget til danske foreninger.
           </p>
           <div className="mt-8 flex gap-3">
-            <Button size="sm" onClick={() => navigate("/auth")} className="press-effect">
+            <Button size="sm" onClick={() => navigate("/opret-konto")} className="press-effect">
               Kom i gang gratis
             </Button>
             <Button variant="outline" size="sm" className="press-effect">

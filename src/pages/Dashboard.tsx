@@ -11,16 +11,12 @@ const Dashboard = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-      setUserEmail(user.email ?? null);
+      if (user) setUserEmail(user.email ?? null);
     };
-    checkAuth();
-  }, [navigate]);
+    getUser();
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
