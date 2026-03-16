@@ -42,6 +42,7 @@ const PERM_FIELDS: PermField[] = [
   { key: "kan_redigere_moeder", label: "Redigere møde", category: "Møder" },
   { key: "kan_sende_til_godkendelse", label: "Sende referat til godkendelse", category: "Møder" },
   { key: "kan_godkende_referat", label: "Godkende referat", category: "Møder" },
+  { key: "kan_se_dokumenter", label: "Se dokumenter", category: "Dokumenter" },
   { key: "kan_uploade_dokumenter", label: "Uploade dokumenter", category: "Dokumenter" },
   { key: "kan_slette_dokumenter", label: "Slette dokumenter", category: "Dokumenter" },
   { key: "kan_lukke_andres_handlingspunkter", label: "Lukke andres handlingspunkter", category: "Handlingspunkter" },

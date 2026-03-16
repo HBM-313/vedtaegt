@@ -18,6 +18,7 @@ export interface RolePermission {
   kan_redigere_moeder: boolean;
   kan_sende_til_godkendelse: boolean;
   kan_godkende_referat: boolean;
+  kan_se_dokumenter: boolean;
   kan_uploade_dokumenter: boolean;
   kan_slette_dokumenter: boolean;
   kan_lukke_andres_handlingspunkter: boolean;
@@ -178,6 +179,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           kan_redigere_moeder: row.kan_redigere_moeder,
           kan_sende_til_godkendelse: row.kan_sende_til_godkendelse,
           kan_godkende_referat: row.kan_godkende_referat,
+          kan_se_dokumenter: row.kan_se_dokumenter,
           kan_uploade_dokumenter: row.kan_uploade_dokumenter,
           kan_slette_dokumenter: row.kan_slette_dokumenter,
           kan_lukke_andres_handlingspunkter: row.kan_lukke_andres_handlingspunkter,

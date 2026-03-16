@@ -46,6 +46,7 @@ interface PdfData {
   actionItems: { title: string; assignee: string; due_date: string | null }[];
   participants: { name: string; role: string }[];
   approvals: { name: string; role: string; approved_at: string | null }[];
+  documents: { name: string; category: string | null; uploader: string; created_at: string | null; agenda_item_title: string | null }[];
 }
 
 const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
@@ -53,11 +54,12 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
   useEffect(() => {
     const load = async () => {
-      const [agendaRes, minutesRes, actionsRes, approvalsRes] = await Promise.all([
+      const [agendaRes, minutesRes, actionsRes, approvalsRes, docsRes] = await Promise.all([
         supabase.from("agenda_items").select("title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
         supabase.from("minutes").select("content").eq("meeting_id", meeting.id).maybeSingle(),
         supabase.from("action_items").select("title, due_date, members!action_items_assigned_to_fkey(name)").eq("meeting_id", meeting.id),
         supabase.from("approvals").select("approved_at, status, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id).eq("status", "godkendt"),
+        supabase.from("documents").select("name, category, created_at, uploaded_by, agenda_item_id, members!documents_uploaded_by_fkey(name), agenda_items!documents_agenda_item_id_fkey(title)").eq("meeting_id", meeting.id),
       ]);
 
       let mc: Record<string, string> = {};
@@ -66,6 +68,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
       }
 
       const approvalData = (approvalsRes.data || []) as any[];
+      const docsData = (docsRes.data || []) as any[];
       setData({
         agendaItems: (agendaRes.data || []) as any,
         minutesContent: mc,
@@ -82,6 +85,13 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           name: a.members?.name || "Ukendt",
           role: a.members?.role || "",
           approved_at: a.approved_at,
+        })),
+        documents: docsData.map((d: any) => ({
+          name: d.name,
+          category: d.category,
+          uploader: d.members?.name || "Ukendt",
+          created_at: d.created_at,
+          agenda_item_title: d.agenda_items?.title || null,
         })),
       });
     };
@@ -147,6 +157,36 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
                 </Text>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* Bilag section */}
+        {data!.documents.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Bilag</Text>
+            {data!.documents.filter(d => !d.agenda_item_title).length > 0 && (
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 9, fontWeight: "bold", marginBottom: 4 }}>Fælles dokumenter:</Text>
+                {data!.documents.filter(d => !d.agenda_item_title).map((d, i) => (
+                  <View key={i} style={styles.actionItem}>
+                    <Text style={styles.actionTitle}>{i + 1}. {d.name}{d.category ? ` (${d.category})` : ""}</Text>
+                    <Text style={styles.actionMeta}>Uploadet af: {d.uploader}{d.created_at ? ` · ${formatDanishDate(d.created_at)}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {data!.documents.filter(d => d.agenda_item_title).length > 0 && (
+              <View>
+                {data!.documents.filter(d => d.agenda_item_title).map((d, i) => (
+                  <View key={i} style={styles.actionItem}>
+                    <Text style={{ fontSize: 9, fontWeight: "bold", marginBottom: 2 }}>Tilknyttet: {d.agenda_item_title}</Text>
+                    <Text style={styles.actionTitle}>{d.name}{d.category ? ` (${d.category})` : ""}</Text>
+                    <Text style={styles.actionMeta}>Uploadet af: {d.uploader}{d.created_at ? ` · ${formatDanishDate(d.created_at)}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={{ fontSize: 8, color: "#666", marginTop: 4 }}>Dokumenterne kan tilgås via Vedtægt-platformen.</Text>
           </View>
         )}
 

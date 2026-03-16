@@ -5,6 +5,7 @@ export interface Permissions {
   kanRedigereMoeder: boolean;
   kanSendeTilGodkendelse: boolean;
   kanGodkendeReferat: boolean;
+  kanSeDokumenter: boolean;
   kanUploadeDokumenter: boolean;
   kanSletteDokumenter: boolean;
   kanLukkeAndresHandlingspunkter: boolean;
@@ -24,6 +25,7 @@ const DEFAULT_PERMS: Permissions = {
   kanRedigereMoeder: false,
   kanSendeTilGodkendelse: false,
   kanGodkendeReferat: true,
+  kanSeDokumenter: false,
   kanUploadeDokumenter: false,
   kanSletteDokumenter: false,
   kanLukkeAndresHandlingspunkter: false,
@@ -58,6 +60,7 @@ export function usePermissions(): Permissions {
     kanRedigereMoeder: perms?.kan_redigere_moeder ?? false,
     kanSendeTilGodkendelse: perms?.kan_sende_til_godkendelse ?? false,
     kanGodkendeReferat: perms?.kan_godkende_referat ?? true,
+    kanSeDokumenter: perms?.kan_se_dokumenter ?? false,
     kanUploadeDokumenter: perms?.kan_uploade_dokumenter ?? false,
     kanSletteDokumenter: perms?.kan_slette_dokumenter ?? false,
     kanLukkeAndresHandlingspunkter: perms?.kan_lukke_andres_handlingspunkter ?? false,

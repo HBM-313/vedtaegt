@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import SettingsTabs from "@/components/SettingsTabs";
+import CategoryManagement from "@/components/documents/CategoryManagement";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -257,6 +258,10 @@ const OrgSettings = () => {
             <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">{savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}</Button>
           </CardContent>
         </Card>
+      )}
+
+      {(perms.erFormand || perms.erNaestformand || perms.aktuelRolle === "kasserer") && (
+        <CategoryManagement />
       )}
 
       <Card>
