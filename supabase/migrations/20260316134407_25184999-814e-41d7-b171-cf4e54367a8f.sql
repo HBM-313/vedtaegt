@@ -1,0 +1,1 @@
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS sendt_af uuid REFERENCES members(id);
