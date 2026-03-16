@@ -386,6 +386,37 @@ const TeamSettings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Member Detail Modal */}
+      <Dialog open={!!detailMember} onOpenChange={(open) => { if (!open) setDetailMember(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {detailMember?.name} {detailMember && roleBadge(detailMember.role)}
+            </DialogTitle>
+          </DialogHeader>
+          {detailMember && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                <span className="text-muted-foreground">E-mail</span>
+                <span>{detailMember.email}</span>
+                <span className="text-muted-foreground">Telefon</span>
+                <span>{detailMember.telefon || "—"}</span>
+                <span className="text-muted-foreground">Fødselsdato</span>
+                <span>{detailMember.foedselsdato ? formatShortDate(detailMember.foedselsdato) : "—"}</span>
+                <span className="text-muted-foreground">Adresse</span>
+                <span>{[detailMember.adresse, detailMember.postnummer, detailMember.by].filter(Boolean).join(", ") || "—"}</span>
+                <span className="text-muted-foreground">E-mail bekræftet</span>
+                <span>{detailMember.email_bekraeftet ? "Ja" : "Nej"}</span>
+                <span className="text-muted-foreground">Inviteret</span>
+                <span>{detailMember.invited_at ? formatShortDate(detailMember.invited_at) : "—"}</span>
+                <span className="text-muted-foreground">Tilsluttet</span>
+                <span>{detailMember.joined_at ? formatShortDate(detailMember.joined_at) : "—"}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
