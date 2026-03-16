@@ -400,8 +400,8 @@ const CreateMeeting = () => {
 
         {/* Buttons */}
         <div className="flex items-center gap-3 pt-2">
-          <Button type="submit" size="sm" className="press-effect" disabled={loading}>
-            {loading ? "Opretter..." : "Opret møde"}
+          <Button type="submit" size="sm" className="press-effect" disabled={loading || !orgId || !memberId}>
+            {loading ? "Opretter..." : !orgId || !memberId ? "Henter data..." : "Opret møde"}
           </Button>
           <Button
             type="button"
