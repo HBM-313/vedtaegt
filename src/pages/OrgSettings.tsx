@@ -154,6 +154,7 @@ const OrgSettings = () => {
     setSavingBoard(false);
   };
 
+  const handleExport = async () => {
     if (!orgId) return;
     setExporting(true);
 
