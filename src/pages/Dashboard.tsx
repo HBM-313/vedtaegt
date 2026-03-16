@@ -44,6 +44,16 @@ const Dashboard = () => {
     const load = async () => {
       setLoading(true);
 
+      // Check deletion status
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("deletion_requested_at")
+        .eq("id", orgId)
+        .single();
+      if (orgData?.deletion_requested_at) {
+        setDeletionDate(new Date(new Date(orgData.deletion_requested_at).getTime() + 30 * 24 * 60 * 60 * 1000));
+      }
+
       const [meetingsRes, actionsRes, docsRes] = await Promise.all([
         supabase
           .from("meetings")
