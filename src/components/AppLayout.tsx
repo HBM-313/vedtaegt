@@ -199,7 +199,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   .insert({
                     org_id: org.id,
                     user_id: user.id,
-                    role: "owner",
+                    role: "formand",
                     name: pending.name,
                     email: pending.email || user.email,
                     joined_at: now,
