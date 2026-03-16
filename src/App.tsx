@@ -18,6 +18,7 @@ import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
 import TeamSettings from "./pages/TeamSettings";
 import OrgSettings from "./pages/OrgSettings";
+import PermissionSettings from "./pages/PermissionSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
 import DpaPage from "./pages/DpaPage";
 import PrivacyPage from "./pages/PrivacyPage";
