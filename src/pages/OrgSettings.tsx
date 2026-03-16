@@ -334,7 +334,7 @@ const OrgSettings = () => {
       </Card>
 
       {/* Section 4: Slet forening */}
-      {isOwner && (
+      {perms.kanOverdrageEjerskab && (
         <Card className="border-destructive/30">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 text-destructive">
