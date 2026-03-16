@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     // OR (paamindelse_sendt_at IS NOT NULL AND paamindelse_sendt_at + paamindelse_efter_dage <= now())
     const { data: pendingApprovals, error: queryError } = await supabase
       .from("approvals")
-      .select("id, token, meeting_id, member_id, paamindelse_efter_dage, sendt_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, email), meetings!approvals_meeting_id_fkey(title)")
+      .select("id, token, meeting_id, member_id, paamindelse_efter_dage, sendt_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, email), meetings!approvals_meeting_id_fkey(title, sendt_af)")
       .eq("status", "afventer")
       .not("token", "is", null);
 
