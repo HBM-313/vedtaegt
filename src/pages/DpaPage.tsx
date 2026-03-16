@@ -118,7 +118,7 @@ const DpaPage = () => (
 
     <footer className="border-t border-border">
       <div className="container py-6 flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">© 2026 Bestyrelsesrum ApS</p>
+        <p className="text-xs text-muted-foreground">© 2026 Vedtægt ApS</p>
         <div className="flex gap-4">
           <Link to="/privatlivspolitik" className="text-xs text-muted-foreground hover:text-foreground">Privatlivspolitik</Link>
         </div>
