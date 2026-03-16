@@ -141,6 +141,23 @@ const MeetingDetail = () => {
 
       await supabase.from("approvals").insert(newApprovals);
 
+      // Auto-approve sender's own approval
+      if (memberId) {
+        const senderApproval = newApprovals.find(a => a.member_id === memberId);
+        if (senderApproval) {
+          await supabase.from("approvals").update({
+            status: "godkendt",
+            approved_at: new Date().toISOString(),
+          }).eq("meeting_id", id).eq("member_id", memberId).eq("status", "afventer");
+
+          await logAuditEvent("meeting.referat_godkendt", "meeting", id, {
+            member_id: memberId,
+            kilde: "auto_afsender",
+            runde: actualRunde,
+          });
+        }
+      }
+
       // Send emails
       const meetingDate = meeting.meeting_date
         ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
