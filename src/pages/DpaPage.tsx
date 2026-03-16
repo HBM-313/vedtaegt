@@ -97,7 +97,7 @@ const DpaPage = () => (
           Leverandøren underretter Kunden uden unødig forsinkelse og senest inden 72 timer efter at et databrud er konstateret.
         </p>
         <p className="text-sm text-muted-foreground">
-          Kontakt ved databrud: <a href="mailto:sikkerhed@bestyrelsesrum.dk" className="text-primary hover:underline">sikkerhed@bestyrelsesrum.dk</a>
+          Kontakt ved databrud: <a href="mailto:sikkerhed@vedtægt.dk" className="text-primary hover:underline">sikkerhed@vedtægt.dk</a>
         </p>
       </section>
 
