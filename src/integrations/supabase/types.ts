@@ -67,6 +67,13 @@ export type Database = {
             foreignKeyName: "action_items_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
@@ -112,6 +119,13 @@ export type Database = {
             foreignKeyName: "agenda_items_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "agenda_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
@@ -126,36 +140,58 @@ export type Database = {
       }
       approvals: {
         Row: {
+          afvist_kommentar: string | null
           approved_at: string | null
           id: string
           ip_address: string | null
           meeting_id: string | null
           member_id: string | null
           org_id: string | null
+          paamindelse_efter_dage: number | null
+          paamindelse_sendt_at: string | null
+          sendt_at: string | null
+          status: string | null
           token: string | null
           token_expires_at: string | null
         }
         Insert: {
+          afvist_kommentar?: string | null
           approved_at?: string | null
           id?: string
           ip_address?: string | null
           meeting_id?: string | null
           member_id?: string | null
           org_id?: string | null
+          paamindelse_efter_dage?: number | null
+          paamindelse_sendt_at?: string | null
+          sendt_at?: string | null
+          status?: string | null
           token?: string | null
           token_expires_at?: string | null
         }
         Update: {
+          afvist_kommentar?: string | null
           approved_at?: string | null
           id?: string
           ip_address?: string | null
           meeting_id?: string | null
           member_id?: string | null
           org_id?: string | null
+          paamindelse_efter_dage?: number | null
+          paamindelse_sendt_at?: string | null
+          sendt_at?: string | null
+          status?: string | null
           token?: string | null
           token_expires_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "approvals_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
           {
             foreignKeyName: "approvals_meeting_id_fkey"
             columns: ["meeting_id"]
@@ -279,9 +315,14 @@ export type Database = {
       }
       meetings: {
         Row: {
+          afvist_af: string | null
+          afvist_at: string | null
+          afvist_kommentar: string | null
           approved_at: string | null
           created_at: string | null
           created_by: string | null
+          godkendelse_frist_dage: number | null
+          godkendelse_runde: number | null
           id: string
           location: string | null
           meeting_date: string | null
@@ -290,9 +331,14 @@ export type Database = {
           title: string
         }
         Insert: {
+          afvist_af?: string | null
+          afvist_at?: string | null
+          afvist_kommentar?: string | null
           approved_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          godkendelse_frist_dage?: number | null
+          godkendelse_runde?: number | null
           id?: string
           location?: string | null
           meeting_date?: string | null
@@ -301,9 +347,14 @@ export type Database = {
           title: string
         }
         Update: {
+          afvist_af?: string | null
+          afvist_at?: string | null
+          afvist_kommentar?: string | null
           approved_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          godkendelse_frist_dage?: number | null
+          godkendelse_runde?: number | null
           id?: string
           location?: string | null
           meeting_date?: string | null
@@ -312,6 +363,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "meetings_afvist_af_fkey"
+            columns: ["afvist_af"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "meetings_created_by_fkey"
             columns: ["created_by"]
@@ -443,6 +501,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "minutes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
           },
           {
             foreignKeyName: "minutes_meeting_id_fkey"
@@ -644,7 +709,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      meeting_approval_status: {
+        Row: {
+          antal_afventer: number | null
+          antal_afvist: number | null
+          antal_godkendt: number | null
+          godkendelse_runde: number | null
+          meeting_id: string | null
+          org_id: string | null
+          status: string | null
+          title: string | null
+          total_inviterede: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       insert_default_permissions: {
