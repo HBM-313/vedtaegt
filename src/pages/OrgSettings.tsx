@@ -283,11 +283,11 @@ const OrgSettings = () => {
                 {usageBar(usage.storageMb, PLAN_LIMITS.free.storageMb, "Storage", " MB")}
               </div>
               <Separator />
-              <Button>Opgrader til Forening — 99 kr/md</Button>
+              <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret. Kontakt support for at opgradere.")}>Opgrader til Forening — 99 kr/md</Button>
             </>
           )}
           {org?.plan !== "free" && (
-            <Button variant="outline">Administrér abonnement</Button>
+            <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret. Kontakt support for at administrere dit abonnement.")}>Administrér abonnement</Button>
           )}
         </CardContent>
       </Card>

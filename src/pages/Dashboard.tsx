@@ -31,7 +31,7 @@ interface Document {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { orgId } = useOrg();
+  const { orgId, memberId } = useOrg();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -62,13 +62,16 @@ const Dashboard = () => {
           .gte("meeting_date", new Date().toISOString())
           .order("meeting_date", { ascending: true })
           .limit(3),
-        supabase
-          .from("action_items")
-          .select("id, title, due_date, meetings(title)")
-          .eq("org_id", orgId)
-          .eq("status", "open")
-          .order("due_date", { ascending: true })
-          .limit(5),
+        memberId
+          ? supabase
+              .from("action_items")
+              .select("id, title, due_date, meetings(title)")
+              .eq("org_id", orgId)
+              .eq("assigned_to", memberId)
+              .eq("status", "open")
+              .order("due_date", { ascending: true })
+              .limit(5)
+          : Promise.resolve({ data: [] }),
         supabase
           .from("documents")
           .select("id, name, category, created_at")
@@ -84,7 +87,7 @@ const Dashboard = () => {
     };
 
     load();
-  }, [orgId]);
+  }, [orgId, memberId]);
 
   const Section = ({
     title,
