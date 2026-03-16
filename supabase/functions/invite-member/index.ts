@@ -96,6 +96,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get org name and caller name for email
+    const { data: orgData } = await supabase.from("organizations").select("name").eq("id", org_id).single();
+    const { data: callerData } = await supabase.from("members").select("name").eq("id", callerMember.id).single();
+
     // Log audit
     await supabase.from("audit_events").insert({
       org_id,
@@ -104,6 +108,22 @@ Deno.serve(async (req) => {
       resource_type: "member",
       resource_id: newMember.id,
       metadata: { email, role },
+    });
+
+    // Send invitation email
+    const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    await fetch(sendEmailUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: email,
+        templateName: "invitation",
+        templateData: {
+          orgName: orgData?.name || "din forening",
+          orgId: org_id,
+          senderName: callerData?.name || "En administrator",
+        },
+      }),
     });
 
     return new Response(

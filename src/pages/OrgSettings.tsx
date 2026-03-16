@@ -158,8 +158,26 @@ const OrgSettings = () => {
     if (!orgId || confirmName !== org?.name) return;
     setDeleting(true);
 
-    await supabase.from("organizations").update({ deletion_requested_at: new Date().toISOString() }).eq("id", orgId);
+    const now = new Date();
+    const deletionDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    await supabase.from("organizations").update({ deletion_requested_at: now.toISOString() }).eq("id", orgId);
     await logAuditEvent("org.deletion_requested", "organization", orgId);
+
+    // Send deletion confirmation email to current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      await supabase.functions.invoke("send-email", {
+        body: {
+          to: user.email,
+          templateName: "deletion_confirmation",
+          templateData: {
+            orgName: org?.name,
+            deletionDate: formatShortDate(deletionDate),
+          },
+        },
+      });
+    }
 
     toast.success("Sletningsanmodning registreret.");
     setDeleteStep(0);

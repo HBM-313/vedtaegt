@@ -10,6 +10,8 @@ interface ApprovalData {
   id: string;
   approved_at: string | null;
   token_expires_at: string | null;
+  meeting_id: string;
+  org_id: string;
   meeting: {
     title: string;
     meeting_date: string | null;
@@ -39,7 +41,7 @@ const ApprovalPage = () => {
       // Fetch approval by token
       const { data: approval, error: approvalError } = await supabase
         .from("approvals")
-        .select("id, approved_at, token_expires_at, meeting_id, meetings(title, meeting_date, organizations(name))")
+        .select("id, approved_at, token_expires_at, meeting_id, meetings(title, meeting_date, org_id, organizations(name))")
         .eq("token", token)
         .maybeSingle();
 
@@ -80,6 +82,8 @@ const ApprovalPage = () => {
         id: approval.id,
         approved_at: approval.approved_at,
         token_expires_at: approval.token_expires_at,
+        meeting_id: approval.meeting_id!,
+        org_id: (meetingData as any)?.org_id || "",
         meeting: {
           title: meetingData?.title || "",
           meeting_date: meetingData?.meeting_date || null,
@@ -99,10 +103,11 @@ const ApprovalPage = () => {
     setSubmitting(true);
 
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from("approvals")
         .update({
-          approved_at: new Date().toISOString(),
+          approved_at: now,
           ip_address: "web-client",
           token: null, // invalidate token
         })
@@ -110,10 +115,56 @@ const ApprovalPage = () => {
 
       if (error) throw error;
 
-      const now = new Date().toISOString();
       setConfirmed(true);
       setConfirmedAt(now);
       toast.success("Din godkendelse er registreret.");
+
+      // Check if all approvals are done → send "all approved" email to owner
+      const { data: approvalRows } = await supabase
+        .from("approvals")
+        .select("id, approved_at, member_id, members(name)")
+        .eq("meeting_id", data.meeting_id);
+
+      if (approvalRows) {
+        const allDone = approvalRows.every((a) => a.approved_at !== null);
+        if (allDone) {
+          // Auto-approve meeting
+          await supabase.from("meetings").update({
+            status: "approved",
+            approved_at: now,
+          }).eq("id", data.meeting_id);
+
+          // Find owner email
+          const { data: ownerMember } = await supabase
+            .from("members")
+            .select("email")
+            .eq("org_id", data.org_id)
+            .eq("role", "owner")
+            .limit(1)
+            .single();
+
+          if (ownerMember) {
+            await supabase.functions.invoke("send-email", {
+              body: {
+                to: ownerMember.email,
+                templateName: "all_approved",
+                templateData: {
+                  meetingTitle: data.meeting.title,
+                  meetingId: data.meeting_id,
+                  approvalCount: approvalRows.length,
+                  approvals: approvalRows.map((a) => ({
+                    name: (a.members as any)?.name || "Ukendt",
+                    date: a.approved_at ? new Intl.DateTimeFormat("da-DK", {
+                      day: "numeric", month: "short", year: "numeric",
+                      hour: "2-digit", minute: "2-digit",
+                    }).format(new Date(a.approved_at)) : "",
+                  })),
+                },
+              },
+            });
+          }
+        }
+      }
     } catch (err: any) {
       toast.error(err.message || "Kunne ikke registrere godkendelse.");
     } finally {
