@@ -25,7 +25,7 @@ export async function logAuditEvent(
     action,
     resource_type: resourceType,
     resource_id: resourceId,
-    metadata: metadata as Record<string, unknown>,
+    metadata: metadata as unknown as import("@/integrations/supabase/types").Json,
     ip_address: "client-side",
   }]);
 }
