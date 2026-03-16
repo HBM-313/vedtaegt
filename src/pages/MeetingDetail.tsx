@@ -169,7 +169,7 @@ const MeetingDetail = () => {
 
       for (const approval of newApprovals) {
         const member = members.find((m) => m.id === approval.member_id);
-        if (!member) continue;
+        if (!member || member.id === memberId) continue; // Skip sender
         await supabase.functions.invoke("send-email", {
           body: {
             to: member.email,
