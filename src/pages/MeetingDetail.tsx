@@ -5,12 +5,15 @@ import { useOrg } from "@/components/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatShortDate } from "@/lib/format";
+import { getRoleLabel } from "@/lib/roles";
 import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
-import { Play, SendHorizontal, CheckCircle, Download } from "lucide-react";
+import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell } from "lucide-react";
 import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
@@ -19,6 +22,14 @@ import MeetingPdf from "@/components/meeting/MeetingPdf";
 interface Meeting {
   id: string; title: string; meeting_date: string | null;
   location: string | null; status: string | null; approved_at: string | null; org_id: string | null;
+  godkendelse_frist_dage: number | null; afvist_af: string | null; afvist_at: string | null;
+  afvist_kommentar: string | null; godkendelse_runde: number | null;
+}
+
+interface ApprovalRow {
+  id: string; member_id: string | null; status: string | null;
+  approved_at: string | null; paamindelse_sendt_at: string | null;
+  members: { name: string; role: string } | null;
 }
 
 const MeetingDetail = () => {
@@ -30,6 +41,12 @@ const MeetingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [fristDage, setFristDage] = useState(3);
+  const [members, setMembers] = useState<{ id: string; name: string; role: string; email: string }[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalRow[]>([]);
+  const [rejector, setRejector] = useState<{ name: string; role: string } | null>(null);
+  const [reminderLoading, setReminderLoading] = useState(false);
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
@@ -38,45 +55,203 @@ const MeetingDetail = () => {
     setLoading(false);
   }, [id]);
 
-  useEffect(() => { loadMeeting(); }, [loadMeeting]);
+  const loadApprovals = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("approvals")
+      .select("id, member_id, status, approved_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, role)")
+      .eq("meeting_id", id);
+    setApprovals((data || []) as unknown as ApprovalRow[]);
+  }, [id]);
 
-  const updateStatus = async (newStatus: string) => {
+  useEffect(() => { loadMeeting(); loadApprovals(); }, [loadMeeting, loadApprovals]);
+
+  // Load rejector info
+  useEffect(() => {
+    if (!meeting?.afvist_af) { setRejector(null); return; }
+    supabase.from("members").select("name, role").eq("id", meeting.afvist_af).single()
+      .then(({ data }) => setRejector(data ? { name: data.name, role: data.role } : null));
+  }, [meeting?.afvist_af]);
+
+  // Realtime approvals
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase.channel(`approvals-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "approvals", filter: `meeting_id=eq.${id}` }, () => {
+        loadApprovals();
+        loadMeeting();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, loadApprovals, loadMeeting]);
+
+  const loadMembers = async () => {
+    if (!orgId) return;
+    const { data } = await supabase.from("members")
+      .select("id, name, role, email")
+      .eq("org_id", orgId)
+      .not("user_id", "is", null)
+      .eq("email_bekraeftet", true);
+    setMembers(data || []);
+  };
+
+  const openSendModal = async () => {
+    await loadMembers();
+    setFristDage(meeting?.godkendelse_frist_dage || 3);
+    setShowSendModal(true);
+  };
+
+  const handleSendForApproval = async () => {
     if (!meeting || !id) return;
-
-    // Permission checks in handleSubmit
-    if (newStatus === "active" && !perms.kanRedigereMoeder) {
-      toast.error("Du har ikke tilladelse til at starte møder."); return;
-    }
-    if (newStatus === "pending_approval" && !perms.kanSendeTilGodkendelse) {
-      toast.error("Du har ikke tilladelse til at sende til godkendelse."); return;
-    }
-
     setStatusLoading(true);
     try {
-      if (newStatus === "pending_approval") {
-        const { error } = await supabase.functions.invoke("send-approval-emails", { body: { meeting_id: id } });
-        if (error) throw error;
+      const runde = (meeting.godkendelse_runde || 1) + (meeting.status === "active" && meeting.afvist_at ? 1 : 0);
+      const actualRunde = meeting.afvist_at ? runde : (meeting.godkendelse_runde || 1);
+
+      // Update meeting
+      await supabase.from("meetings").update({
+        status: "pending_approval",
+        godkendelse_frist_dage: fristDage,
+        godkendelse_runde: actualRunde,
+        afvist_af: null,
+        afvist_at: null,
+        afvist_kommentar: null,
+      }).eq("id", id);
+
+      // Delete existing pending approvals
+      await supabase.from("approvals").delete().eq("meeting_id", id).eq("status", "afventer");
+
+      // Create new approvals for each member
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+
+      const newApprovals = members.map((m) => ({
+        meeting_id: id,
+        org_id: orgId,
+        member_id: m.id,
+        status: "afventer",
+        token: crypto.randomUUID(),
+        token_expires_at: expiresAt.toISOString(),
+        sendt_at: new Date().toISOString(),
+        paamindelse_efter_dage: fristDage,
+      }));
+
+      await supabase.from("approvals").insert(newApprovals);
+
+      // Send emails
+      const meetingDate = meeting.meeting_date
+        ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
+        : "ukendt dato";
+
+      // Get sender name
+      const { data: senderMember } = await supabase.from("members")
+        .select("name, email").eq("org_id", orgId!).eq("role", "formand").limit(1).single();
+
+      for (const approval of newApprovals) {
+        const member = members.find((m) => m.id === approval.member_id);
+        if (!member) continue;
+        await supabase.functions.invoke("send-email", {
+          body: {
+            to: member.email,
+            templateName: "approval_request",
+            templateData: {
+              meetingTitle: meeting.title,
+              meetingDate,
+              token: approval.token,
+              recipientName: member.name,
+              senderName: senderMember?.name || "Formanden",
+              senderEmail: senderMember?.email || "",
+              orgName: orgName || "",
+              runde: actualRunde,
+            },
+          },
+        });
       }
 
-      const updateData: Record<string, unknown> = { status: newStatus };
-      if (newStatus === "approved") updateData.approved_at = new Date().toISOString();
+      await logAuditEvent("meeting.sent_for_approval", "meeting", id, {
+        antal_modtagere: members.length,
+        frist_dage: fristDage,
+        runde: actualRunde,
+      });
 
-      const { error } = await supabase.from("meetings").update(updateData).eq("id", id);
-      if (error) throw error;
-
-      await logAuditEvent(`meeting.status_changed`, "meeting", id, { from: meeting.status, to: newStatus });
-      toast.success(
-        newStatus === "active" ? "Mødet er startet." :
-        newStatus === "pending_approval" ? "Sendt til godkendelse." :
-        newStatus === "approved" ? "Mødet er godkendt." : "Status opdateret."
-      );
+      toast.success(`Sendt til godkendelse hos ${members.length} medlemmer.`);
+      setShowSendModal(false);
       await loadMeeting();
+      await loadApprovals();
     } catch (err: any) {
-      toast.error(err.message || "Kunne ikke opdatere status.");
+      toast.error(err.message || "Kunne ikke sende til godkendelse.");
     } finally {
       setStatusLoading(false);
     }
   };
+
+  const handleStartMeeting = async () => {
+    if (!meeting || !id || !perms.kanRedigereMoeder) return;
+    setStatusLoading(true);
+    try {
+      await supabase.from("meetings").update({ status: "active" }).eq("id", id);
+      await logAuditEvent("meeting.status_changed", "meeting", id, { from: "draft", to: "active" });
+      toast.success("Mødet er startet.");
+      await loadMeeting();
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke starte mødet.");
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    setReminderLoading(true);
+    try {
+      const pending = approvals.filter((a) => a.status === "afventer");
+      // Re-fetch tokens for pending ones
+      const { data: pendingWithTokens } = await supabase.from("approvals")
+        .select("id, token, member_id, members!approvals_member_id_fkey(name, email)")
+        .eq("meeting_id", id!)
+        .eq("status", "afventer");
+
+      if (!pendingWithTokens) throw new Error("Ingen afventende godkendelser.");
+
+      const total = approvals.length;
+      const done = approvals.filter((a) => a.status === "godkendt").length;
+
+      for (const a of pendingWithTokens) {
+        const member = a.members as any;
+        if (!member?.email || !a.token) continue;
+        await supabase.functions.invoke("send-email", {
+          body: {
+            to: member.email,
+            templateName: "approval_reminder",
+            templateData: {
+              meetingTitle: meeting!.title,
+              token: a.token,
+              recipientName: member.name,
+              approvedCount: done,
+              totalCount: total,
+            },
+          },
+        });
+        await supabase.from("approvals").update({ paamindelse_sendt_at: new Date().toISOString() }).eq("id", a.id);
+      }
+
+      await logAuditEvent("meeting.paamindelse_sendt", "meeting", id!, { antal: pendingWithTokens.length });
+      toast.success(`Påmindelse sendt til ${pendingWithTokens.length} medlemmer.`);
+      await loadApprovals();
+    } catch (err: any) {
+      toast.error(err.message || "Kunne ikke sende påmindelse.");
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  // Check if reminder button should be disabled (24h cooldown)
+  const lastReminder = approvals.reduce<Date | null>((latest, a) => {
+    if (!a.paamindelse_sendt_at) return latest;
+    const d = new Date(a.paamindelse_sendt_at);
+    return !latest || d > latest ? d : latest;
+  }, null);
+  const reminderCooldown = lastReminder && (Date.now() - lastReminder.getTime()) < 24 * 60 * 60 * 1000;
+  const hoursUntilReminder = lastReminder ? Math.ceil((24 * 60 * 60 * 1000 - (Date.now() - lastReminder.getTime())) / (60 * 60 * 1000)) : 0;
 
   if (loading) {
     return (
@@ -87,6 +262,10 @@ const MeetingDetail = () => {
   }
 
   if (!meeting) return <p className="text-sm text-muted-foreground">Møde ikke fundet.</p>;
+
+  const approvedCount = approvals.filter((a) => a.status === "godkendt").length;
+  const totalCount = approvals.length;
+  const pendingCount = approvals.filter((a) => a.status === "afventer").length;
 
   return (
     <div>
@@ -107,17 +286,14 @@ const MeetingDetail = () => {
 
         <div className="flex items-center gap-2 shrink-0">
           {perms.kanRedigereMoeder && meeting.status === "draft" && (
-            <Button size="sm" className="press-effect" onClick={() => updateStatus("active")} disabled={statusLoading}>
+            <Button size="sm" className="press-effect" onClick={handleStartMeeting} disabled={statusLoading}>
               <Play className="h-4 w-4 mr-1" /> Start møde
             </Button>
           )}
           {perms.kanSendeTilGodkendelse && meeting.status === "active" && (
-            <Button size="sm" className="press-effect" onClick={() => updateStatus("pending_approval")} disabled={statusLoading}>
+            <Button size="sm" className="press-effect" onClick={openSendModal} disabled={statusLoading}>
               <SendHorizontal className="h-4 w-4 mr-1" /> Send til godkendelse
             </Button>
-          )}
-          {meeting.status === "pending_approval" && (
-            <ApprovalProgress meetingId={meeting.id} onAllApproved={() => updateStatus("approved")} />
           )}
           {meeting.status === "approved" && (
             <Button size="sm" variant="outline" className="press-effect" onClick={() => setShowPdf(true)}>
@@ -126,6 +302,83 @@ const MeetingDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Rejection banner */}
+      {meeting.status === "active" && meeting.afvist_at && meeting.afvist_kommentar && rejector && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">Referatet blev afvist</p>
+              <p className="text-sm text-muted-foreground">
+                Afvist af: {rejector.name} ({getRoleLabel(rejector.role)})
+                <br />
+                Dato: {meeting.afvist_at ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(meeting.afvist_at)) : ""}
+              </p>
+              <div className="mt-2 rounded bg-muted p-3">
+                <p className="text-sm italic">"{meeting.afvist_kommentar}"</p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Ret referatet og send til godkendelse igen.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval progress section */}
+      {meeting.status === "pending_approval" && approvals.length > 0 && (
+        <div className="rounded-md border border-border bg-muted/30 p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold">
+              Godkendelsesstatus — Runde {meeting.godkendelse_runde || 1}
+            </p>
+            <span className="text-sm text-muted-foreground">{approvedCount}/{totalCount} ✓</span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-muted rounded-full h-2 mb-4">
+            <div
+              className="bg-primary h-2 rounded-full transition-all duration-300"
+              style={{ width: `${totalCount > 0 ? (approvedCount / totalCount) * 100 : 0}%` }}
+            />
+          </div>
+
+          {/* Member list */}
+          <div className="space-y-2 mb-4">
+            {approvals.map((a) => (
+              <div key={a.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {a.status === "godkendt" ? (
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                  ) : (
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span>{a.members?.name || "Ukendt"} ({getRoleLabel(a.members?.role || "")})</span>
+                </div>
+                <span className="text-muted-foreground text-xs">
+                  {a.status === "godkendt" && a.approved_at
+                    ? `Godkendt ${formatShortDate(a.approved_at)}`
+                    : "Afventer"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Reminder button */}
+          {pendingCount > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSendReminder}
+              disabled={reminderLoading || !!reminderCooldown}
+            >
+              <Bell className="h-4 w-4 mr-1" />
+              {reminderCooldown
+                ? `Påmindelse sendt. Kan sendes igen om ${hoursUntilReminder}t.`
+                : `Send påmindelse til ${pendingCount} afventende`}
+            </Button>
+          )}
+        </div>
+      )}
 
       <Tabs defaultValue="agenda">
         <TabsList className="mb-4">
@@ -139,37 +392,51 @@ const MeetingDetail = () => {
       </Tabs>
 
       {showPdf && <MeetingPdf meeting={meeting} orgName={orgName || ""} onClose={() => setShowPdf(false)} />}
+
+      {/* Send for approval modal */}
+      <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send referat til godkendelse</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Følgende medlemmer modtager referatet:</p>
+              <div className="space-y-1">
+                {members.map((m) => (
+                  <div key={m.id} className="flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-primary" />
+                    <span>{m.name} ({getRoleLabel(m.role)})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Påmindelse hvis ikke godkendt inden:</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={14}
+                  value={fristDage}
+                  onChange={(e) => setFristDage(Math.min(14, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-20"
+                />
+                <span className="text-sm text-muted-foreground">dage</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSendModal(false)}>Annullér</Button>
+            <Button onClick={handleSendForApproval} disabled={statusLoading || members.length === 0}>
+              <SendHorizontal className="h-4 w-4 mr-1" />
+              {statusLoading ? "Sender..." : "Send til godkendelse"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
-
-function ApprovalProgress({ meetingId, onAllApproved }: { meetingId: string; onAllApproved: () => void }) {
-  const [total, setTotal] = useState(0);
-  const [approved, setApproved] = useState(0);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase.from("approvals").select("id, approved_at").eq("meeting_id", meetingId);
-      if (data) {
-        setTotal(data.length);
-        const done = data.filter((a) => a.approved_at).length;
-        setApproved(done);
-        if (data.length > 0 && done === data.length) onAllApproved();
-      }
-    };
-    load();
-    const channel = supabase.channel(`approvals-${meetingId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "approvals", filter: `meeting_id=eq.${meetingId}` }, () => load())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [meetingId, onAllApproved]);
-
-  return (
-    <div className="flex items-center gap-2">
-      <CheckCircle className="h-4 w-4 text-muted-foreground" />
-      <span className="text-sm text-muted-foreground">Afventer godkendelse fra {approved}/{total} deltagere</span>
-    </div>
-  );
-}
 
 export default MeetingDetail;
