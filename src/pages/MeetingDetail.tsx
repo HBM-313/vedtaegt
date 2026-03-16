@@ -61,7 +61,7 @@ const MeetingDetail = () => {
     if (!id) return;
     const { data } = await supabase
       .from("approvals")
-      .select("id, member_id, status, approved_at, paamindelse_sendt_at, members!approvals_member_id_fkey(name, role)")
+      .select("id, member_id, status, approved_at, paamindelse_sendt_at, afvist_kommentar, members!approvals_member_id_fkey(name, role)")
       .eq("meeting_id", id);
     setApprovals((data || []) as unknown as ApprovalRow[]);
   }, [id]);
