@@ -18,6 +18,7 @@ import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
 import MeetingPdf from "@/components/meeting/MeetingPdf";
+import InPlatformApproval from "@/components/meeting/InPlatformApproval";
 
 interface Meeting {
   id: string; title: string; meeting_date: string | null;
