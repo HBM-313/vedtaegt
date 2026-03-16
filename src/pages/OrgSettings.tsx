@@ -329,7 +329,51 @@ const OrgSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Section 3: GDPR */}
+      {/* Section 2b: Bestyrelsesstruktur */}
+      {perms.kanOpdatereForening && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Bestyrelsesstruktur
+            </CardTitle>
+            <CardDescription>Konfigurér antal pladser i bestyrelsen.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="max-bestyrelse" className="text-xs">Maks. antal bestyrelsesmedlemmer</Label>
+                <Input
+                  id="max-bestyrelse"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={maxBestyrelse}
+                  onChange={(e) => setMaxBestyrelse(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-suppleanter" className="text-xs">Maks. antal suppleanter</Label>
+                <Input
+                  id="max-suppleanter"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={maxSuppleanter}
+                  onChange={(e) => setMaxSuppleanter(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Aktuel bestyrelse: {boardCounts.bestyrelsesmedlem} / {maxBestyrelse} bestyrelsesmedlemmer, {boardCounts.suppleant} / {maxSuppleanter} suppleanter
+            </p>
+            <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">
+              {savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
