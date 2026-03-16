@@ -392,7 +392,9 @@ const MeetingDetail = () => {
                 </div>
                 <span className="text-muted-foreground text-xs">
                   {a.status === "godkendt" && a.approved_at
-                    ? `Godkendt ${formatShortDate(a.approved_at)}`
+                    ? a.member_id === meeting.sendt_af
+                      ? "Godkendt automatisk (afsender)"
+                      : `Godkendt ${formatShortDate(a.approved_at)}`
                     : "Afventer"}
                 </span>
               </div>
