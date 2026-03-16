@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Check } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
+import { getRoleLabel } from "@/lib/roles";
 
 interface Approval {
   id: string;
