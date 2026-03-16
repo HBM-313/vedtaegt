@@ -6,10 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Temporary sender until domain is verified
+// Temporary sender until bestyrelsesrum.dk domain is verified in Resend
 const FROM_EMAIL = "Bestyrelsesrum <onboarding@resend.dev>";
 // When domain is ready, switch to:
-// const FROM_EMAIL = "Bestyrelsesrum <service@vedtægt.dk>";
+// const FROM_EMAIL = "Bestyrelsesrum <service@bestyrelsesrum.dk>";
 
 const BASE_URL = "https://id-preview--9fc10c4b-e8ee-4087-b0a5-eeb410a0f69e.lovable.app";
 
