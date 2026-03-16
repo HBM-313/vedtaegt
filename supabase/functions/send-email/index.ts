@@ -6,22 +6,36 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Temporary sender until vedtægt.dk domain is verified in Resend
 const FROM_EMAIL = "Vedtægt <onboarding@resend.dev>";
-// When domain is ready, switch to:
-// const FROM_EMAIL = "Vedtægt <service@vedtægt.dk>";
 
-const BASE_URL = "https://id-preview--9fc10c4b-e8ee-4087-b0a5-eeb410a0f69e.lovable.app";
+function getBaseUrl(): string {
+  return "https://vedtaegt.lovable.app";
+}
 
 interface TemplateData {
   [key: string]: unknown;
 }
 
+function getRoleLabelDa(role: string): string {
+  const map: Record<string, string> = {
+    formand: "Formand",
+    naestformand: "Næstformand",
+    kasserer: "Kasserer",
+    bestyrelsesmedlem: "Bestyrelsesmedlem",
+    suppleant: "Suppleant",
+  };
+  return map[role] || role;
+}
+
 function renderTemplate(templateName: string, data: TemplateData): { subject: string; html: string } {
+  const BASE_URL = getBaseUrl();
+
   switch (templateName) {
-    case "invitation":
+    case "invitation": {
+      const roleName = getRoleLabelDa(data.role as string);
+      const expiresDate = data.expiresAt ? new Date(data.expiresAt as string).toLocaleDateString("da-DK", { day: "numeric", month: "long", year: "numeric" }) : "14 dage";
       return {
-        subject: `Du er inviteret til ${data.orgName}s bestyrelse`,
+        subject: `Du er inviteret som ${roleName} i ${data.orgName}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -29,17 +43,21 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
   <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Du er inviteret til ${data.orgName}</h1>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
-    ${data.senderName} har inviteret dig til at deltage i ${data.orgName}s bestyrelse på Vedtægt.
+    ${data.senderName} har inviteret dig til at deltage i <strong>${data.orgName}</strong> som <strong>${roleName}</strong>.
   </p>
-  <a href="${BASE_URL}/opret-konto?org=${data.orgId}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
-    Acceptér invitation
+  <a href="${BASE_URL}/invitation/${data.invitationToken}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+    Acceptér invitation og opret konto
   </a>
-  <p style="font-size:12px;color:#94a3b8;margin-top:24px;">
+  <p style="font-size:13px;color:#64748b;margin-top:24px;line-height:1.5;">
+    Invitationen udløber om 14 dage (${expiresDate}).
+  </p>
+  <p style="font-size:12px;color:#94a3b8;margin-top:16px;">
     Kender du ikke til denne invitation? Se bort fra denne e-mail.
   </p>
 </div>
 </body></html>`,
       };
+    }
 
     case "approval_request":
       return {
@@ -58,9 +76,6 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
   </a>
   <p style="font-size:12px;color:#94a3b8;margin-top:24px;line-height:1.5;">
     Linket er personligt og må ikke deles. Det udløber om 30 dage.
-  </p>
-  <p style="font-size:11px;color:#94a3b8;margin-top:16px;line-height:1.5;border-top:1px solid #e5e7eb;padding-top:16px;">
-    Din godkendelse registrerer at du har gennemlæst og accepteret referatets indhold. Det er ikke en juridisk bindende underskrift.
   </p>
 </div>
 </body></html>`,
@@ -84,7 +99,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Navn</th>
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Tidspunkt</th>
     </tr>
-    ${(data.approvals as Array<{name: string; date: string}>).map((a: {name: string; date: string}) => `
+    ${(data.approvals as Array<{name: string; date: string}>).map((a) => `
     <tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:8px 0;font-size:13px;color:#0f172a;">${a.name}</td>
       <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.date}</td>
@@ -99,18 +114,18 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 
     case "ownership_transfer":
       return {
-        subject: `Du er inviteret til at overtage ejerskabet af ${data.orgName}`,
+        subject: `Du er inviteret til at overtage formandsposten i ${data.orgName}`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="font-family:Arial,sans-serif;background:#f9fafb;padding:40px 0;">
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
-  <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Ejerskabsoverdragelse</h1>
+  <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Overdragelse af formandsposten</h1>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
-    ${data.fromName} ønsker at overdrage ejerskabet af <strong>${data.orgName}</strong> til dig.
+    ${data.fromName} ønsker at overdrage formandsposten i <strong>${data.orgName}</strong> til dig.
   </p>
   <a href="${BASE_URL}/overdrag-ejerskab/${data.token}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
-    Acceptér ejerskab
+    Acceptér formandsposten
   </a>
   <p style="font-size:12px;color:#94a3b8;margin-top:24px;">
     Dette link udløber om 48 timer.
@@ -134,11 +149,8 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 12px;">
     Alle data slettes permanent den <strong>${data.deletionDate}</strong>.
   </p>
-  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 12px;">
+  <p style="font-size:14px;color:#64748b;line-height:1.6;">
     Regnskabsdokumenter opbevares dog i 5 år jf. Bogføringsloven.
-  </p>
-  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 0;">
-    Fortrød du? Kontakt os på <a href="mailto:support@vedtægt.dk" style="color:#1e40af;">support@vedtægt.dk</a> inden ${data.deletionDate}.
   </p>
 </div>
 </body></html>`,
@@ -160,7 +172,6 @@ Deno.serve(async (req) => {
       throw new Error("RESEND_API_KEY is not configured");
     }
 
-    // Allow both authenticated and service-role calls
     const { to, templateName, templateData } = await req.json();
 
     if (!to || !templateName) {
@@ -202,7 +213,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("send-email error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

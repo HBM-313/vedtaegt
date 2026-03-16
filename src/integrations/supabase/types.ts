@@ -330,48 +330,72 @@ export type Database = {
       }
       members: {
         Row: {
+          adresse: string | null
+          by: string | null
           created_at: string | null
           email: string
+          email_bekraeftet: boolean | null
           er_fravaerende: boolean | null
+          foedselsdato: string | null
           fravaerende_siden: string | null
           id: string
+          invitation_token: string | null
+          invitation_token_expires_at: string | null
           invited_at: string | null
           joined_at: string | null
           marketing_consent: boolean | null
           marketing_consent_at: string | null
           name: string
           org_id: string | null
+          postnummer: string | null
           role: string
+          telefon: string | null
           user_id: string | null
         }
         Insert: {
+          adresse?: string | null
+          by?: string | null
           created_at?: string | null
           email: string
+          email_bekraeftet?: boolean | null
           er_fravaerende?: boolean | null
+          foedselsdato?: string | null
           fravaerende_siden?: string | null
           id?: string
+          invitation_token?: string | null
+          invitation_token_expires_at?: string | null
           invited_at?: string | null
           joined_at?: string | null
           marketing_consent?: boolean | null
           marketing_consent_at?: string | null
           name: string
           org_id?: string | null
+          postnummer?: string | null
           role?: string
+          telefon?: string | null
           user_id?: string | null
         }
         Update: {
+          adresse?: string | null
+          by?: string | null
           created_at?: string | null
           email?: string
+          email_bekraeftet?: boolean | null
           er_fravaerende?: boolean | null
+          foedselsdato?: string | null
           fravaerende_siden?: string | null
           id?: string
+          invitation_token?: string | null
+          invitation_token_expires_at?: string | null
           invited_at?: string | null
           joined_at?: string | null
           marketing_consent?: boolean | null
           marketing_consent_at?: string | null
           name?: string
           org_id?: string | null
+          postnummer?: string | null
           role?: string
+          telefon?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -438,52 +462,67 @@ export type Database = {
       }
       organizations: {
         Row: {
+          adresse: string | null
+          by: string | null
           created_at: string | null
           cvr: string | null
           deletion_requested_at: string | null
           dpa_accepted_at: string | null
           dpa_version: string | null
           id: string
+          kontakt_email: string | null
           max_bestyrelsesmedlemmer: number | null
           max_suppleanter: number | null
           name: string
           permission_version: number | null
           plan: string
+          postnummer: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          telefon: string | null
         }
         Insert: {
+          adresse?: string | null
+          by?: string | null
           created_at?: string | null
           cvr?: string | null
           deletion_requested_at?: string | null
           dpa_accepted_at?: string | null
           dpa_version?: string | null
           id?: string
+          kontakt_email?: string | null
           max_bestyrelsesmedlemmer?: number | null
           max_suppleanter?: number | null
           name: string
           permission_version?: number | null
           plan?: string
+          postnummer?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          telefon?: string | null
         }
         Update: {
+          adresse?: string | null
+          by?: string | null
           created_at?: string | null
           cvr?: string | null
           deletion_requested_at?: string | null
           dpa_accepted_at?: string | null
           dpa_version?: string | null
           id?: string
+          kontakt_email?: string | null
           max_bestyrelsesmedlemmer?: number | null
           max_suppleanter?: number | null
           name?: string
           permission_version?: number | null
           plan?: string
+          postnummer?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          telefon?: string | null
         }
         Relationships: []
       }

@@ -20,6 +20,8 @@ import TeamSettings from "./pages/TeamSettings";
 import OrgSettings from "./pages/OrgSettings";
 import PermissionSettings from "./pages/PermissionSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
+import InvitationAccept from "./pages/InvitationAccept";
+import Profile from "./pages/Profile";
 import DpaPage from "./pages/DpaPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
@@ -47,6 +49,7 @@ const App = () => (
           <Route path="/opret-konto" element={<Signup />} />
           <Route path="/nulstil-adgangskode" element={<ResetPassword />} />
           <Route path="/godkend/:token" element={<ApprovalPage />} />
+          <Route path="/invitation/:token" element={<InvitationAccept />} />
           <Route path="/dpa" element={<DpaPage />} />
           <Route path="/privatlivspolitik" element={<PrivacyPage />} />
 
@@ -57,6 +60,7 @@ const App = () => (
           <Route path="/moeder/:id" element={<ProtectedLayout><MeetingDetail /></ProtectedLayout>} />
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
           <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
+          <Route path="/profil" element={<ProtectedLayout><Profile /></ProtectedLayout>} />
           <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
           <Route path="/indstillinger/tilladelser" element={<ProtectedLayout><PermissionSettings /></ProtectedLayout>} />
           <Route path="/indstillinger/forening" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />

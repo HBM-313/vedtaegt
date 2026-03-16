@@ -9,7 +9,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield,
+  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -124,16 +124,26 @@ function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!collapsed ? (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-sidebar-foreground truncate">{memberName || "Bruger"}</span>
-            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleLogout}>
+          <div className="space-y-2">
+            <NavLink to="/profil" className="flex items-center gap-2 text-xs text-sidebar-foreground hover:text-sidebar-primary transition-colors" activeClassName="text-sidebar-primary font-medium">
+              <User className="h-3.5 w-3.5" />
+              <span className="truncate">{memberName || "Min profil"}</span>
+            </NavLink>
+            <div className="flex justify-end">
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleLogout}>
+                <LogOut className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2 flex flex-col items-center">
+            <NavLink to="/profil" className="hover:text-sidebar-primary" activeClassName="text-sidebar-primary">
+              <User className="h-3.5 w-3.5" />
+            </NavLink>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleLogout}>
               <LogOut className="h-3.5 w-3.5" />
             </Button>
           </div>
-        ) : (
-          <Button variant="ghost" size="icon" className="h-7 w-7 mx-auto" onClick={handleLogout}>
-            <LogOut className="h-3.5 w-3.5" />
-          </Button>
         )}
       </SidebarFooter>
     </Sidebar>
@@ -209,7 +219,15 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             if (!existingMember) {
               const { data: org, error: orgError } = await supabase
                 .from("organizations")
-                .insert({ name: pending.orgName, cvr: pending.cvr, plan: "free", dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0" })
+                .insert({
+                  name: pending.orgName, cvr: pending.cvr, plan: "free",
+                  dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0",
+                  adresse: pending.orgAdresse || null,
+                  postnummer: pending.orgPostnummer || null,
+                  by: pending.orgBy || null,
+                  telefon: pending.orgTelefon || null,
+                  kontakt_email: pending.orgEmail || null,
+                } as any)
                 .select().single();
 
               if (!orgError && org) {
@@ -220,7 +238,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   name: pending.name, email: pending.email || user.email,
                   joined_at: now, marketing_consent: pending.marketingConsent || false,
                   marketing_consent_at: pending.marketingConsent ? now : null,
-                });
+                  telefon: pending.telefon || null,
+                  adresse: pending.adresse || null,
+                  postnummer: pending.postnummer || null,
+                  by: pending.by || null,
+                  foedselsdato: pending.foedselsdato || null,
+                  email_bekraeftet: true,
+                } as any);
               }
             }
             localStorage.removeItem("vedtaegt_pending_signup");

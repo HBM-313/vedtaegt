@@ -16,6 +16,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -34,6 +37,8 @@ interface Member {
   id: string; name: string; email: string; role: string;
   user_id: string | null; joined_at: string | null; invited_at: string | null;
   er_fravaerende?: boolean; fravaerende_siden?: string | null;
+  telefon?: string | null; adresse?: string | null; postnummer?: string | null;
+  by?: string | null; foedselsdato?: string | null; email_bekraeftet?: boolean;
 }
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
@@ -56,6 +61,7 @@ const TeamSettings = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [removeMember, setRemoveMember] = useState<Member | null>(null);
+  const [detailMember, setDetailMember] = useState<Member | null>(null);
   const [orgLimits, setOrgLimits] = useState({ max_bestyrelsesmedlemmer: 5, max_suppleanter: 2 });
 
   const [inviteEmail, setInviteEmail] = useState("");
@@ -69,7 +75,7 @@ const TeamSettings = () => {
     setLoading(true);
     const [membersRes, orgRes] = await Promise.all([
       supabase.from("members")
-        .select("id, name, email, role, user_id, joined_at, invited_at, er_fravaerende, fravaerende_siden")
+        .select("id, name, email, role, user_id, joined_at, invited_at, er_fravaerende, fravaerende_siden, telefon, adresse, postnummer, by, foedselsdato, email_bekraeftet")
         .eq("org_id", orgId).order("created_at", { ascending: true }),
       supabase.from("organizations")
         .select("max_bestyrelsesmedlemmer, max_suppleanter")
@@ -215,6 +221,7 @@ const TeamSettings = () => {
                   <TableHead>Navn</TableHead>
                   <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                   <TableHead>Rolle</TableHead>
+                  <TableHead className="hidden lg:table-cell">Telefon</TableHead>
                   <TableHead className="hidden md:table-cell">Tilsluttet</TableHead>
                   {perms.erFormand && <TableHead className="hidden md:table-cell">Fravær</TableHead>}
                   {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && <TableHead className="text-right">Handlinger</TableHead>}
@@ -222,7 +229,7 @@ const TeamSettings = () => {
               </TableHeader>
               <TableBody>
                 {activeMembers.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailMember(m)}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {m.name}
@@ -236,6 +243,7 @@ const TeamSettings = () => {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{m.email}</TableCell>
                     <TableCell>{roleBadge(m.role)}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">{(m as any).telefon || "—"}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{m.joined_at ? formatShortDate(m.joined_at) : "—"}</TableCell>
                     {perms.erFormand && (
                       <TableCell className="hidden md:table-cell">
@@ -378,6 +386,37 @@ const TeamSettings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Member Detail Modal */}
+      <Dialog open={!!detailMember} onOpenChange={(open) => { if (!open) setDetailMember(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {detailMember?.name} {detailMember && roleBadge(detailMember.role)}
+            </DialogTitle>
+          </DialogHeader>
+          {detailMember && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                <span className="text-muted-foreground">E-mail</span>
+                <span>{detailMember.email}</span>
+                <span className="text-muted-foreground">Telefon</span>
+                <span>{detailMember.telefon || "—"}</span>
+                <span className="text-muted-foreground">Fødselsdato</span>
+                <span>{detailMember.foedselsdato ? formatShortDate(detailMember.foedselsdato) : "—"}</span>
+                <span className="text-muted-foreground">Adresse</span>
+                <span>{[detailMember.adresse, detailMember.postnummer, detailMember.by].filter(Boolean).join(", ") || "—"}</span>
+                <span className="text-muted-foreground">E-mail bekræftet</span>
+                <span>{detailMember.email_bekraeftet ? "Ja" : "Nej"}</span>
+                <span className="text-muted-foreground">Inviteret</span>
+                <span>{detailMember.invited_at ? formatShortDate(detailMember.invited_at) : "—"}</span>
+                <span className="text-muted-foreground">Tilsluttet</span>
+                <span>{detailMember.joined_at ? formatShortDate(detailMember.joined_at) : "—"}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
