@@ -310,7 +310,7 @@ const Signup = () => {
                   onCheckedChange={(checked) => setMarketingConsent(checked === true)}
                 />
                 <Label htmlFor="marketing" className="text-sm leading-relaxed cursor-pointer">
-                  Jeg ønsker at modtage nyheder og tips om Bestyrelsesrum{" "}
+                  Jeg ønsker at modtage nyheder og tips om Vedtægt{" "}
                   <span className="text-muted-foreground">(valgfri)</span>
                 </Label>
               </div>

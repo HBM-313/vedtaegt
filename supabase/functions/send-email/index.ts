@@ -6,10 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Temporary sender until bestyrelsesrum.dk domain is verified in Resend
-const FROM_EMAIL = "Bestyrelsesrum <onboarding@resend.dev>";
+// Temporary sender until vedtægt.dk domain is verified in Resend
+const FROM_EMAIL = "Vedtægt <onboarding@resend.dev>";
 // When domain is ready, switch to:
-// const FROM_EMAIL = "Bestyrelsesrum <service@bestyrelsesrum.dk>";
+// const FROM_EMAIL = "Vedtægt <service@vedtægt.dk>";
 
 const BASE_URL = "https://id-preview--9fc10c4b-e8ee-4087-b0a5-eeb410a0f69e.lovable.app";
 
@@ -29,7 +29,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
   <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Du er inviteret til ${data.orgName}</h1>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
-    ${data.senderName} har inviteret dig til at deltage i ${data.orgName}s bestyrelse på Bestyrelsesrum.
+    ${data.senderName} har inviteret dig til at deltage i ${data.orgName}s bestyrelse på Vedtægt.
   </p>
   <a href="${BASE_URL}/opret-konto?org=${data.orgId}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
     Acceptér invitation
@@ -138,7 +138,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
     Regnskabsdokumenter opbevares dog i 5 år jf. Bogføringsloven.
   </p>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 0;">
-    Fortrød du? Kontakt os på <a href="mailto:support@bestyrelsesrum.dk" style="color:#1e40af;">support@bestyrelsesrum.dk</a> inden ${data.deletionDate}.
+    Fortrød du? Kontakt os på <a href="mailto:support@vedtægt.dk" style="color:#1e40af;">support@vedtægt.dk</a> inden ${data.deletionDate}.
   </p>
 </div>
 </body></html>`,

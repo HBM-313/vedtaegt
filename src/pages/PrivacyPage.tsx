@@ -7,7 +7,7 @@ const PrivacyPage = () => (
       <div className="container flex h-14 items-center">
         <Link to="/" className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold">Bestyrelsesrum</span>
+          <span className="text-base font-semibold">Vedtægt</span>
         </Link>
       </div>
     </header>
@@ -21,8 +21,8 @@ const PrivacyPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">Hvem er vi?</h2>
         <div className="text-sm text-muted-foreground leading-relaxed space-y-2">
-          <p>Bestyrelsesrum ApS er dataansvarlig for behandlingen af de personoplysninger, som vi modtager om dig.</p>
-          <p><strong className="text-foreground">Kontakt:</strong> privatliv@bestyrelsesrum.dk</p>
+          <p>Vedtægt ApS er dataansvarlig for behandlingen af de personoplysninger, som vi modtager om dig.</p>
+          <p><strong className="text-foreground">Kontakt:</strong> privatliv@vedtægt.dk</p>
           <p><strong className="text-foreground">Adresse:</strong> Nørregade 12, 1165 København K</p>
           <p><strong className="text-foreground">CVR:</strong> 12345678</p>
         </div>
@@ -84,7 +84,7 @@ const PrivacyPage = () => (
           <li><strong className="text-foreground">Dataportabilitet</strong> — ret til at modtage dine data i et maskinlæsbart format</li>
         </ul>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Kontakt os på <a href="mailto:privatliv@bestyrelsesrum.dk" className="text-primary hover:underline">privatliv@bestyrelsesrum.dk</a> for at udøve dine rettigheder.
+          Kontakt os på <a href="mailto:privatliv@vedtægt.dk" className="text-primary hover:underline">privatliv@vedtægt.dk</a> for at udøve dine rettigheder.
         </p>
       </section>
 
@@ -101,7 +101,7 @@ const PrivacyPage = () => (
 
     <footer className="border-t border-border">
       <div className="container py-6 flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">© 2026 Bestyrelsesrum ApS</p>
+        <p className="text-xs text-muted-foreground">© 2026 Vedtægt ApS</p>
         <div className="flex gap-4">
           <Link to="/dpa" className="text-xs text-muted-foreground hover:text-foreground">Databehandleraftale</Link>
         </div>

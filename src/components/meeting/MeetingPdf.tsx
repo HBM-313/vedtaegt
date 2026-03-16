@@ -172,7 +172,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
         )}
 
         <View style={styles.footer}>
-          <Text>Genereret af Bestyrelsesrum · {formatDanishDate(new Date().toISOString())}</Text>
+          <Text>Genereret af Vedtægt · {formatDanishDate(new Date().toISOString())}</Text>
         </View>
       </Page>
     </Document>

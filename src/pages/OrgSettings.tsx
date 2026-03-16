@@ -145,7 +145,7 @@ const OrgSettings = () => {
     const a = document.createElement("a");
     const dateStr = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `bestyrelsesrum-eksport-${dateStr}.json`;
+    a.download = `vedtaegt-eksport-${dateStr}.json`;
     a.click();
     URL.revokeObjectURL(url);
 

@@ -56,7 +56,7 @@ const Index = () => {
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <span className="text-base font-semibold">Bestyrelsesrum</span>
+            <span className="text-base font-semibold">Vedtægt</span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
@@ -161,7 +161,7 @@ const Index = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Bestyrelsesrum</span>
+              <span className="text-sm font-medium text-muted-foreground">Vedtægt</span>
             </div>
             <p className="text-xs text-muted-foreground text-center">
               GDPR-compliant · Data opbevares i EU · Dansk support

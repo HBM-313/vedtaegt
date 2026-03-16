@@ -7,7 +7,7 @@ const DpaPage = () => (
       <div className="container flex h-14 items-center">
         <Link to="/" className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold">Bestyrelsesrum</span>
+          <span className="text-base font-semibold">Vedtægt</span>
         </Link>
       </div>
     </header>
@@ -21,7 +21,7 @@ const DpaPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">1. Parter</h2>
         <div className="text-sm text-muted-foreground space-y-2 leading-relaxed">
-          <p><strong className="text-foreground">Databehandler:</strong> Bestyrelsesrum ApS, Nørregade 12, 1165 København K, CVR: 12345678 ("Leverandøren")</p>
+          <p><strong className="text-foreground">Databehandler:</strong> Vedtægt ApS, Nørregade 12, 1165 København K, CVR: 12345678 ("Leverandøren")</p>
           <p><strong className="text-foreground">Dataansvarlig:</strong> Foreningens navn som opgivet ved oprettelse ("Kunden")</p>
         </div>
       </section>
@@ -29,7 +29,7 @@ const DpaPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">2. Formål og omfang</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Leverandøren behandler personoplysninger på vegne af Kunden med det ene formål at levere Bestyrelsesrum-platformen, herunder opbevaring af mødereferater, bestyrelsesoplysninger og dokumenter.
+          Leverandøren behandler personoplysninger på vegne af Kunden med det ene formål at levere Vedtægt-platformen, herunder opbevaring af mødereferater, bestyrelsesoplysninger og dokumenter.
         </p>
       </section>
 
@@ -97,7 +97,7 @@ const DpaPage = () => (
           Leverandøren underretter Kunden uden unødig forsinkelse og senest inden 72 timer efter at et databrud er konstateret.
         </p>
         <p className="text-sm text-muted-foreground">
-          Kontakt ved databrud: <a href="mailto:sikkerhed@bestyrelsesrum.dk" className="text-primary hover:underline">sikkerhed@bestyrelsesrum.dk</a>
+          Kontakt ved databrud: <a href="mailto:sikkerhed@vedtægt.dk" className="text-primary hover:underline">sikkerhed@vedtægt.dk</a>
         </p>
       </section>
 
@@ -118,7 +118,7 @@ const DpaPage = () => (
 
     <footer className="border-t border-border">
       <div className="container py-6 flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">© 2026 Bestyrelsesrum ApS</p>
+        <p className="text-xs text-muted-foreground">© 2026 Vedtægt ApS</p>
         <div className="flex gap-4">
           <Link to="/privatlivspolitik" className="text-xs text-muted-foreground hover:text-foreground">Privatlivspolitik</Link>
         </div>
