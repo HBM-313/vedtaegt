@@ -29,7 +29,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
   <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Du er inviteret til ${data.orgName}</h1>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
-    ${data.senderName} har inviteret dig til at deltage i ${data.orgName}s bestyrelse på Bestyrelsesrum.
+    ${data.senderName} har inviteret dig til at deltage i ${data.orgName}s bestyrelse på Vedtægt.
   </p>
   <a href="${BASE_URL}/opret-konto?org=${data.orgId}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
     Acceptér invitation
