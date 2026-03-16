@@ -18,6 +18,7 @@ export interface RolePermission {
   kan_redigere_moeder: boolean;
   kan_sende_til_godkendelse: boolean;
   kan_godkende_referat: boolean;
+  kan_se_dokumenter: boolean;
   kan_uploade_dokumenter: boolean;
   kan_slette_dokumenter: boolean;
   kan_lukke_andres_handlingspunkter: boolean;
