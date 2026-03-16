@@ -259,13 +259,63 @@ export type Database = {
           },
         ]
       }
+      document_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          er_aktiv: boolean | null
+          er_laast: boolean | null
+          id: string
+          label: string
+          name: string
+          org_id: string
+          retention_years: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          er_aktiv?: boolean | null
+          er_laast?: boolean | null
+          id?: string
+          label: string
+          name: string
+          org_id: string
+          retention_years?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          er_aktiv?: boolean | null
+          er_laast?: boolean | null
+          id?: string
+          label?: string
+          name?: string
+          org_id?: string
+          retention_years?: number | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_categories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
+          agenda_item_id: string | null
           category: string | null
           created_at: string | null
           file_size_bytes: number | null
           file_type: string | null
           id: string
+          kilde: string | null
+          meeting_id: string | null
           name: string
           org_id: string | null
           retention_years: number | null
@@ -273,11 +323,14 @@ export type Database = {
           uploaded_by: string | null
         }
         Insert: {
+          agenda_item_id?: string | null
           category?: string | null
           created_at?: string | null
           file_size_bytes?: number | null
           file_type?: string | null
           id?: string
+          kilde?: string | null
+          meeting_id?: string | null
           name: string
           org_id?: string | null
           retention_years?: number | null
@@ -285,11 +338,14 @@ export type Database = {
           uploaded_by?: string | null
         }
         Update: {
+          agenda_item_id?: string | null
           category?: string | null
           created_at?: string | null
           file_size_bytes?: number | null
           file_type?: string | null
           id?: string
+          kilde?: string | null
+          meeting_id?: string | null
           name?: string
           org_id?: string | null
           retention_years?: number | null
@@ -297,6 +353,27 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_agenda_item_id_fkey"
+            columns: ["agenda_item_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "documents_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_org_id_fkey"
             columns: ["org_id"]
@@ -661,6 +738,7 @@ export type Database = {
           kan_oprette_moeder: boolean | null
           kan_redigere_forening: boolean | null
           kan_redigere_moeder: boolean | null
+          kan_se_dokumenter: boolean | null
           kan_se_indstillinger: boolean | null
           kan_sende_til_godkendelse: boolean | null
           kan_slette_dokumenter: boolean | null
@@ -680,6 +758,7 @@ export type Database = {
           kan_oprette_moeder?: boolean | null
           kan_redigere_forening?: boolean | null
           kan_redigere_moeder?: boolean | null
+          kan_se_dokumenter?: boolean | null
           kan_se_indstillinger?: boolean | null
           kan_sende_til_godkendelse?: boolean | null
           kan_slette_dokumenter?: boolean | null
@@ -699,6 +778,7 @@ export type Database = {
           kan_oprette_moeder?: boolean | null
           kan_redigere_forening?: boolean | null
           kan_redigere_moeder?: boolean | null
+          kan_se_dokumenter?: boolean | null
           kan_se_indstillinger?: boolean | null
           kan_sende_til_godkendelse?: boolean | null
           kan_slette_dokumenter?: boolean | null
