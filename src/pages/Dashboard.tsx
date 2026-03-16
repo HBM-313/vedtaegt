@@ -36,6 +36,7 @@ const Dashboard = () => {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletionDate, setDeletionDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!orgId) return;
