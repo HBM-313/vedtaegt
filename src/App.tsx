@@ -18,6 +18,7 @@ import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
 import TeamSettings from "./pages/TeamSettings";
 import OrgSettings from "./pages/OrgSettings";
+import PermissionSettings from "./pages/PermissionSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
 import DpaPage from "./pages/DpaPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -57,6 +58,7 @@ const App = () => (
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
           <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
           <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger/tilladelser" element={<ProtectedLayout><PermissionSettings /></ProtectedLayout>} />
           <Route path="/indstillinger/forening" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/indstillinger" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/overdrag-ejerskab/:token" element={<ProtectedLayout><OwnershipTransfer /></ProtectedLayout>} />
