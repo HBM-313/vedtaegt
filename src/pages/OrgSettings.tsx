@@ -200,6 +200,7 @@ const OrgSettings = () => {
 
   return (
     <div className="space-y-8 max-w-3xl">
+      <SettingsTabs />
       <h1 className="text-2xl font-semibold text-foreground">Foreningsindstillinger</h1>
 
       {/* Deletion banner */}
