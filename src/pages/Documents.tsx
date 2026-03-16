@@ -25,23 +25,31 @@ import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Download, Trash2, Lock, Plus, FileText } from "lucide-react";
+import { Upload, Search, Download, Trash2, Lock, Plus, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { Navigate } from "react-router-dom";
+import DocumentPreviewModal from "@/components/documents/DocumentPreviewModal";
 
-const CATEGORIES = [
+interface CategoryMeta {
+  value: string;
+  label: string;
+  retention: number;
+  color: string;
+}
+
+const FALLBACK_CATEGORIES: CategoryMeta[] = [
   { value: "referat", label: "Referat", retention: 10, color: "bg-blue-100 text-blue-800 border-blue-200" },
   { value: "regnskab", label: "Regnskab", retention: 5, color: "bg-orange-100 text-orange-800 border-orange-200" },
   { value: "vedtaegt", label: "Vedtægt", retention: 10, color: "bg-purple-100 text-purple-800 border-purple-200" },
   { value: "forsikring", label: "Forsikring", retention: 10, color: "bg-green-100 text-green-800 border-green-200" },
   { value: "other", label: "Øvrige", retention: 3, color: "bg-muted text-muted-foreground border-border" },
-] as const;
-
-type CategoryValue = typeof CATEGORIES[number]["value"];
-const getCategoryMeta = (cat: string | null) => CATEGORIES.find((c) => c.value === cat) ?? CATEGORIES[4];
+];
 
 interface Doc {
   id: string; name: string; category: string | null; created_at: string | null;
-  file_size_bytes: number | null; storage_path: string; uploaded_by: string | null; uploader_name?: string;
+  file_size_bytes: number | null; storage_path: string; uploaded_by: string | null;
+  uploader_name?: string; file_type?: string | null; meeting_id?: string | null;
+  kilde?: string | null; meeting_title?: string | null;
 }
 
 const formatBytes = (bytes: number | null) => {
@@ -50,6 +58,8 @@ const formatBytes = (bytes: number | null) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
 const Documents = () => {
   const { orgId, memberId } = useOrg();
@@ -60,44 +70,91 @@ const Documents = () => {
   const [filterCat, setFilterCat] = useState<string>("all");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteDoc, setDeleteDoc] = useState<Doc | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [docName, setDocName] = useState("");
-  const [category, setCategory] = useState<CategoryValue | "">("");
+  const [category, setCategory] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+
+  const [categories, setCategories] = useState<CategoryMeta[]>(FALLBACK_CATEGORIES);
+
+  // Load categories from DB
+  useEffect(() => {
+    if (!orgId) return;
+    const loadCats = async () => {
+      const { data } = await supabase
+        .from("document_categories")
+        .select("*")
+        .eq("org_id", orgId)
+        .eq("er_aktiv", true)
+        .order("sort_order", { ascending: true });
+      if (data && data.length > 0) {
+        setCategories(data.map((c: any) => ({
+          value: c.name,
+          label: c.label,
+          retention: c.retention_years ?? 3,
+          color: c.color || "bg-muted text-muted-foreground border-border",
+        })));
+      }
+    };
+    loadCats();
+  }, [orgId]);
+
+  const getCategoryMeta = (cat: string | null) => categories.find((c) => c.value === cat) ?? categories[categories.length - 1] ?? FALLBACK_CATEGORIES[4];
 
   const fetchDocs = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
     const { data } = await supabase.from("documents")
-      .select("id, name, category, created_at, file_size_bytes, storage_path, uploaded_by")
+      .select("id, name, category, created_at, file_size_bytes, storage_path, uploaded_by, file_type, meeting_id, kilde")
       .eq("org_id", orgId).order("created_at", { ascending: false });
 
     if (data) {
       const uploaderIds = [...new Set(data.map((d) => d.uploaded_by).filter(Boolean))] as string[];
+      const meetingIds = [...new Set(data.map((d: any) => d.meeting_id).filter(Boolean))] as string[];
       let memberMap: Record<string, string> = {};
+      let meetingMap: Record<string, string> = {};
+
       if (uploaderIds.length > 0) {
         const { data: members } = await supabase.from("members").select("id, name").in("id", uploaderIds);
         if (members) memberMap = Object.fromEntries(members.map((m) => [m.id, m.name]));
       }
-      setDocs(data.map((d) => ({ ...d, uploader_name: d.uploaded_by ? memberMap[d.uploaded_by] : undefined })));
+      if (meetingIds.length > 0) {
+        const { data: meetings } = await supabase.from("meetings").select("id, title").in("id", meetingIds);
+        if (meetings) meetingMap = Object.fromEntries(meetings.map((m) => [m.id, m.title]));
+      }
+
+      setDocs(data.map((d: any) => ({
+        ...d,
+        uploader_name: d.uploaded_by ? memberMap[d.uploaded_by] : undefined,
+        meeting_title: d.meeting_id ? meetingMap[d.meeting_id] : undefined,
+      })));
     }
     setLoading(false);
   }, [orgId]);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
+  // Block page if no permission
+  if (perms.loaded && !perms.kanSeDokumenter) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const filtered = useMemo(() => {
     let result = docs;
-    if (filterCat !== "all") result = result.filter((d) => d.category === filterCat);
+    if (filterCat === "fra_moeder") result = result.filter((d) => d.kilde === "moede");
+    else if (filterCat !== "all") result = result.filter((d) => d.category === filterCat);
     if (search.trim()) { const q = search.toLowerCase(); result = result.filter((d) => d.name.toLowerCase().includes(q)); }
     return result;
   }, [docs, filterCat, search]);
 
-  const selectedCatMeta = category ? getCategoryMeta(category) : null;
-
   const handleFileSelect = (f: File) => {
+    if (f.size > MAX_FILE_SIZE) {
+      toast.error("Filen er for stor. Maksimal filstørrelse er 25 MB.");
+      return;
+    }
     setFile(f);
     if (!docName) setDocName(f.name.replace(/\.[^.]+$/, ""));
   };
@@ -116,7 +173,7 @@ const Documents = () => {
     const { error: dbError } = await supabase.from("documents").insert({
       org_id: orgId, name: docName || file.name, category, storage_path: storagePath,
       file_size_bytes: file.size, file_type: file.type, uploaded_by: memberId, retention_years: retention,
-    });
+    } as any);
     if (dbError) { toast.error("Kunne ikke gemme dokument."); setUploading(false); return; }
 
     await logAuditEvent("document.uploaded", "document", uuid, { name: docName || file.name, category });
@@ -142,7 +199,13 @@ const Documents = () => {
     toast.success("Dokument slettet."); setDeleteDoc(null); fetchDocs();
   };
 
-  const filterTabs = [{ value: "all", label: "Alle" }, ...CATEGORIES.map((c) => ({ value: c.value, label: c.label }))];
+  const filterTabs = [
+    { value: "all", label: "Alle" },
+    ...categories.map((c) => ({ value: c.value, label: c.label })),
+    { value: "fra_moeder", label: "Fra møder" },
+  ];
+
+  const ACCEPTED_TYPES = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx,.doc,.xls";
 
   return (
     <div className="space-y-6">
@@ -197,7 +260,17 @@ const Documents = () => {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="truncate max-w-[200px]">{doc.name}</span>
+                        <div className="min-w-0">
+                          <button
+                            className="truncate max-w-[200px] block text-left hover:underline text-foreground"
+                            onClick={() => setPreviewDoc(doc)}
+                          >
+                            {doc.name}
+                          </button>
+                          {doc.meeting_title && (
+                            <span className="text-xs text-muted-foreground">📋 {doc.meeting_title}</span>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell><Badge variant="outline" className={meta.color}>{meta.label}</Badge></TableCell>
@@ -206,6 +279,9 @@ const Documents = () => {
                     <TableCell className="hidden sm:table-cell text-muted-foreground tabular-nums">{formatBytes(doc.file_size_bytes)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setPreviewDoc(doc)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}><Download className="h-4 w-4" /></Button>
                         {isRegnskab ? (
                           <Tooltip>
@@ -227,11 +303,18 @@ const Documents = () => {
         </div>
       )}
 
+      {previewDoc && (
+        <DocumentPreviewModal
+          doc={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+        />
+      )}
+
       <Dialog open={uploadOpen} onOpenChange={(open) => { setUploadOpen(open); if (!open) { setFile(null); setDocName(""); setCategory(""); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Upload dokument</DialogTitle>
-            <DialogDescription>Vælg en fil og angiv kategori.</DialogDescription>
+            <DialogDescription>Vælg en fil og angiv kategori. Maks 25 MB.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div
@@ -247,10 +330,10 @@ const Documents = () => {
               ) : (
                 <>
                   <p className="text-sm font-medium text-foreground">Træk fil hertil eller klik for at vælge</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, Word, Excel, billeder m.m.</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, Word, Excel, billeder m.m. (maks 25 MB)</p>
                 </>
               )}
-              <input id="file-input" type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
+              <input id="file-input" type="file" accept={ACCEPTED_TYPES} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="doc-name">Dokumentnavn</Label>
@@ -258,11 +341,11 @@ const Documents = () => {
             </div>
             <div className="space-y-2">
               <Label>Kategori</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as CategoryValue)}>
+              <Select value={category} onValueChange={(v) => setCategory(v)}>
                 <SelectTrigger><SelectValue placeholder="Vælg kategori" /></SelectTrigger>
-                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                <SelectContent>{categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
               </Select>
-              {selectedCatMeta && <p className="text-xs text-muted-foreground">Opbevaringsperiode: {selectedCatMeta.retention} år</p>}
+              {category && <p className="text-xs text-muted-foreground">Opbevaringsperiode: {getCategoryMeta(category).retention} år</p>}
             </div>
           </div>
           <DialogFooter>
