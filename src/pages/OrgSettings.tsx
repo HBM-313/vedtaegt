@@ -59,11 +59,6 @@ const OrgSettings = () => {
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  // Block page if no permission
-  if (perms.loaded && !perms.kanSeIndstillinger) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const fetchData = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);

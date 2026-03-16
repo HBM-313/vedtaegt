@@ -85,16 +85,16 @@ const CreateMeeting = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Block page if no permission
-  if (perms.loaded && !perms.kanOpretteMoeder) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   useEffect(() => {
     if (!orgId) return;
     supabase.from("members").select("id, name, role, email").eq("org_id", orgId)
       .then(({ data }) => { if (data) setOrgMembers(data); });
   }, [orgId]);
+
+  // Block page if no permission
+  if (perms.loaded && !perms.kanOpretteMoeder) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const addAgendaItem = () => {
     setAgendaItems((prev) => [...prev, { id: crypto.randomUUID(), title: "", description: "" }]);
