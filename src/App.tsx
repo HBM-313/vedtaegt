@@ -16,6 +16,8 @@ import MeetingDetail from "./pages/MeetingDetail";
 import ApprovalPage from "./pages/ApprovalPage";
 import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
+import TeamSettings from "./pages/TeamSettings";
+import OwnershipTransfer from "./pages/OwnershipTransfer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,9 @@ const App = () => (
           <Route path="/moeder/:id" element={<ProtectedLayout><MeetingDetail /></ProtectedLayout>} />
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
           <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
+          <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
+          <Route path="/overdrag-ejerskab/:token" element={<ProtectedLayout><OwnershipTransfer /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

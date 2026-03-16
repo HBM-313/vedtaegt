@@ -2,3 +2,9 @@ project_id = "uegwrzcdqtienarttczr"
 
 [functions.send-approval-emails]
 verify_jwt = false
+
+[functions.invite-member]
+verify_jwt = false
+
+[functions.transfer-ownership]
+verify_jwt = false
