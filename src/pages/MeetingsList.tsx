@@ -19,7 +19,9 @@ interface Meeting {
 
 const filterTabs = [
   { key: "all", label: "Alle" },
+  { key: "draft", label: "Kladde" },
   { key: "active", label: "Aktive" },
+  { key: "pending_approval", label: "Afventer" },
   { key: "approved", label: "Godkendte" },
 ];
 
