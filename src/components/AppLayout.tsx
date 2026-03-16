@@ -219,7 +219,15 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             if (!existingMember) {
               const { data: org, error: orgError } = await supabase
                 .from("organizations")
-                .insert({ name: pending.orgName, cvr: pending.cvr, plan: "free", dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0" })
+                .insert({
+                  name: pending.orgName, cvr: pending.cvr, plan: "free",
+                  dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0",
+                  adresse: pending.orgAdresse || null,
+                  postnummer: pending.orgPostnummer || null,
+                  by: pending.orgBy || null,
+                  telefon: pending.orgTelefon || null,
+                  kontakt_email: pending.orgEmail || null,
+                } as any)
                 .select().single();
 
               if (!orgError && org) {
@@ -230,7 +238,13 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   name: pending.name, email: pending.email || user.email,
                   joined_at: now, marketing_consent: pending.marketingConsent || false,
                   marketing_consent_at: pending.marketingConsent ? now : null,
-                });
+                  telefon: pending.telefon || null,
+                  adresse: pending.adresse || null,
+                  postnummer: pending.postnummer || null,
+                  by: pending.by || null,
+                  foedselsdato: pending.foedselsdato || null,
+                  email_bekraeftet: true,
+                } as any);
               }
             }
             localStorage.removeItem("vedtaegt_pending_signup");
