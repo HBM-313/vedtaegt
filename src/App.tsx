@@ -15,6 +15,7 @@ import CreateMeeting from "./pages/CreateMeeting";
 import MeetingDetail from "./pages/MeetingDetail";
 import ApprovalPage from "./pages/ApprovalPage";
 import Documents from "./pages/Documents";
+import ActionItems from "./pages/ActionItems";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/moeder/nyt" element={<ProtectedLayout><CreateMeeting /></ProtectedLayout>} />
           <Route path="/moeder/:id" element={<ProtectedLayout><MeetingDetail /></ProtectedLayout>} />
           <Route path="/dokumenter" element={<ProtectedLayout><Documents /></ProtectedLayout>} />
+          <Route path="/handlingspunkter" element={<ProtectedLayout><ActionItems /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
