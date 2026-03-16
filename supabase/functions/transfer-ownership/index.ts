@@ -101,6 +101,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Get org name and caller name for email
+    const { data: orgData } = await supabase.from("organizations").select("name").eq("id", org_id).single();
+    const { data: callerData } = await supabase.from("members").select("name").eq("id", callerMember.id).single();
+
     // Log audit
     await supabase.from("audit_events").insert({
       org_id,
@@ -109,6 +113,22 @@ Deno.serve(async (req) => {
       resource_type: "ownership_transfer",
       resource_id: transfer.id,
       metadata: { to_email },
+    });
+
+    // Send ownership transfer email
+    const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    await fetch(sendEmailUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: to_email,
+        templateName: "ownership_transfer",
+        templateData: {
+          orgName: orgData?.name || "din forening",
+          fromName: callerData?.name || "Den nuværende ejer",
+          token: transferToken,
+        },
+      }),
     });
 
     return new Response(
