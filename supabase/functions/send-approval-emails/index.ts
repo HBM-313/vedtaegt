@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     // Log audit event
     await supabase.from("audit_events").insert({
       org_id: meeting.org_id,
-      user_id: user.id,
+      user_id: userId,
       action: "meeting.sent_for_approval",
       resource_type: "meeting",
       resource_id: meeting_id,
