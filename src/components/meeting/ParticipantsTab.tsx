@@ -59,7 +59,7 @@ const ParticipantsTab = ({ meetingId, orgId }: Props) => {
         <div key={a.id} className="flex items-center justify-between p-3">
           <div>
             <p className="text-sm font-medium">{a.member?.name || "Ukendt"}</p>
-            <p className="text-xs text-muted-foreground capitalize">{a.member?.role || ""}</p>
+            <p className="text-xs text-muted-foreground">{getRoleLabel(a.member?.role || "")}</p>
           </div>
           <div className="flex items-center gap-2">
             {a.approved_at ? (

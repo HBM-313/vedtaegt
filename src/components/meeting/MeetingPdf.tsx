@@ -121,7 +121,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
             <Text style={styles.sectionTitle}>Deltagere</Text>
             {data!.participants.map((p, i) => (
               <Text key={i} style={styles.participant}>
-                {p.name} ({p.role})
+                {p.name} ({getRoleLabel(p.role)})
               </Text>
             ))}
           </View>
