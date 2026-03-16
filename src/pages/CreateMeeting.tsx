@@ -390,7 +390,7 @@ const CreateMeeting = () => {
                   />
                   <div>
                     <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{getRoleLabel(member.role)}</p>
                   </div>
                 </label>
               ))}
