@@ -51,7 +51,8 @@ const planBadge = (plan: string) => {
 };
 
 const OrgSettings = () => {
-  const { orgId, memberRole } = useOrg();
+  const { orgId } = useOrg();
+  const perms = usePermissions();
   const navigate = useNavigate();
   const [org, setOrg] = useState<Org | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,12 @@ const OrgSettings = () => {
   const [name, setName] = useState("");
   const [cvr, setCvr] = useState("");
 
+  // Board structure
+  const [maxBestyrelse, setMaxBestyrelse] = useState(5);
+  const [maxSuppleanter, setMaxSuppleanter] = useState(2);
+  const [savingBoard, setSavingBoard] = useState(false);
+  const [boardCounts, setBoardCounts] = useState({ bestyrelsesmedlem: 0, suppleant: 0 });
+
   // Usage
   const [usage, setUsage] = useState<UsageData>({ meetingsThisYear: 0, membersCount: 0, storageMb: 0 });
 
@@ -69,8 +76,6 @@ const OrgSettings = () => {
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
-
-  const isOwner = memberRole === "owner";
 
   const fetchData = useCallback(async () => {
     if (!orgId) return;
