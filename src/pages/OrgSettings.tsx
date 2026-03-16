@@ -260,6 +260,10 @@ const OrgSettings = () => {
         </Card>
       )}
 
+      {(perms.erFormand || perms.erNaestformand || perms.aktuelRolle === "kasserer") && (
+        <CategoryManagement />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> Dine data</CardTitle>
