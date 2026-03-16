@@ -231,10 +231,26 @@ const CreateMeeting = () => {
         if (agendaError) throw agendaError;
       }
 
+      // Save selected participants as approvals (pending)
+      if (selectedMembers.length > 0) {
+        const { error: partError } = await supabase.from("approvals").insert(
+          selectedMembers.map((mid) => ({
+            meeting_id: meeting.id,
+            org_id: orgId,
+            member_id: mid,
+            approved_at: null,
+            token: null,
+            token_expires_at: null,
+          }))
+        );
+        if (partError) console.error("Could not save participants:", partError);
+      }
+
       // Audit log
       await logAuditEvent("meeting.created", "meeting", meeting.id, {
         title: title.trim(),
         agenda_items_count: validItems.length,
+        participants_count: selectedMembers.length,
       });
 
       toast.success("Mødet er oprettet.");

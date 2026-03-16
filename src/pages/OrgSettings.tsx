@@ -287,7 +287,7 @@ const OrgSettings = () => {
             </>
           )}
           {org?.plan !== "free" && (
-            <Button variant="outline">Administrér abonnement</Button>
+            <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret. Kontakt support for at administrere dit abonnement.")}>Administrér abonnement</Button>
           )}
         </CardContent>
       </Card>

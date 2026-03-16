@@ -43,7 +43,9 @@ const MeetingsList = () => {
         .eq("org_id", orgId)
         .order("meeting_date", { ascending: false });
 
+      if (filter === "draft") query = query.eq("status", "draft");
       if (filter === "active") query = query.eq("status", "active");
+      if (filter === "pending_approval") query = query.eq("status", "pending_approval");
       if (filter === "approved") query = query.eq("status", "approved");
 
       const { data } = await query;
