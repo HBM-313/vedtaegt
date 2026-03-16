@@ -21,7 +21,7 @@ const DpaPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">1. Parter</h2>
         <div className="text-sm text-muted-foreground space-y-2 leading-relaxed">
-          <p><strong className="text-foreground">Databehandler:</strong> Bestyrelsesrum ApS, Nørregade 12, 1165 København K, CVR: 12345678 ("Leverandøren")</p>
+          <p><strong className="text-foreground">Databehandler:</strong> Vedtægt ApS, Nørregade 12, 1165 København K, CVR: 12345678 ("Leverandøren")</p>
           <p><strong className="text-foreground">Dataansvarlig:</strong> Foreningens navn som opgivet ved oprettelse ("Kunden")</p>
         </div>
       </section>
