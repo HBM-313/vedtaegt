@@ -187,6 +187,7 @@ const OrgSettings = () => {
   if (loading) {
     return (
       <div className="space-y-6 max-w-3xl">
+        <SettingsTabs />
         <Skeleton className="h-8 w-48" />
         {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
       </div>
