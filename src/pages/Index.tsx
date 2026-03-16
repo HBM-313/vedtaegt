@@ -38,10 +38,10 @@ const Index = () => {
             <span className="text-base font-semibold tracking-display">Vedtægt</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Log ind
             </Button>
-            <Button size="sm" onClick={() => navigate("/auth")}>
+            <Button size="sm" onClick={() => navigate("/opret-konto")}>
               Opret konto
             </Button>
           </div>
