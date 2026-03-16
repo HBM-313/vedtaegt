@@ -29,7 +29,7 @@ const DpaPage = () => (
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">2. Formål og omfang</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Leverandøren behandler personoplysninger på vegne af Kunden med det ene formål at levere Bestyrelsesrum-platformen, herunder opbevaring af mødereferater, bestyrelsesoplysninger og dokumenter.
+          Leverandøren behandler personoplysninger på vegne af Kunden med det ene formål at levere Vedtægt-platformen, herunder opbevaring af mødereferater, bestyrelsesoplysninger og dokumenter.
         </p>
       </section>
 
