@@ -160,6 +160,36 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           </View>
         )}
 
+        {/* Bilag section */}
+        {data!.documents.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Bilag</Text>
+            {data!.documents.filter(d => !d.agenda_item_title).length > 0 && (
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 9, fontWeight: "bold", marginBottom: 4 }}>Fælles dokumenter:</Text>
+                {data!.documents.filter(d => !d.agenda_item_title).map((d, i) => (
+                  <View key={i} style={styles.actionItem}>
+                    <Text style={styles.actionTitle}>{i + 1}. {d.name}{d.category ? ` (${d.category})` : ""}</Text>
+                    <Text style={styles.actionMeta}>Uploadet af: {d.uploader}{d.created_at ? ` · ${formatDanishDate(d.created_at)}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {data!.documents.filter(d => d.agenda_item_title).length > 0 && (
+              <View>
+                {data!.documents.filter(d => d.agenda_item_title).map((d, i) => (
+                  <View key={i} style={styles.actionItem}>
+                    <Text style={{ fontSize: 9, fontWeight: "bold", marginBottom: 2 }}>Tilknyttet: {d.agenda_item_title}</Text>
+                    <Text style={styles.actionTitle}>{d.name}{d.category ? ` (${d.category})` : ""}</Text>
+                    <Text style={styles.actionMeta}>Uploadet af: {d.uploader}{d.created_at ? ` · ${formatDanishDate(d.created_at)}` : ""}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={{ fontSize: 8, color: "#666", marginTop: 4 }}>Dokumenterne kan tilgås via Vedtægt-platformen.</Text>
+          </View>
+        )}
+
         {/* Godkendelser section */}
         {data!.approvals.length > 0 && (
           <View>
