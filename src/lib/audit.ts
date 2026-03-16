@@ -4,7 +4,7 @@ export async function logAuditEvent(
   action: string,
   resourceType: string,
   resourceId: string,
-  metadata: Record<string, unknown> = {}
+  metadata: Record<string, string | number | boolean | null> = {}
 ) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
