@@ -4,14 +4,25 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AuthGuard from "@/components/AuthGuard";
+import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import MeetingsList from "./pages/MeetingsList";
+import CreateMeeting from "./pages/CreateMeeting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard>
+      <AppLayout>{children}</AppLayout>
+    </AuthGuard>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -30,7 +41,9 @@ const App = () => (
           <Route path="/privatlivspolitik" element={<div>Privatlivspolitik</div>} />
 
           {/* Protected routes */}
-          <Route path="/dashboard" element={<AuthGuard><Dashboard /></AuthGuard>} />
+          <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
+          <Route path="/moeder" element={<ProtectedLayout><MeetingsList /></ProtectedLayout>} />
+          <Route path="/moeder/nyt" element={<ProtectedLayout><CreateMeeting /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
