@@ -34,6 +34,8 @@ interface Member {
   id: string; name: string; email: string; role: string;
   user_id: string | null; joined_at: string | null; invited_at: string | null;
   er_fravaerende?: boolean; fravaerende_siden?: string | null;
+  telefon?: string | null; adresse?: string | null; postnummer?: string | null;
+  by?: string | null; foedselsdato?: string | null; email_bekraeftet?: boolean;
 }
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
