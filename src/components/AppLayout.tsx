@@ -247,6 +247,28 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     loadOrg();
   }, []);
 
+  if (contextError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4 max-w-sm">
+          <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
+          <p className="text-sm text-muted-foreground">{contextError}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/login";
+            }}
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            Log ud
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <OrgContext.Provider value={orgData}>
       <SidebarProvider>
