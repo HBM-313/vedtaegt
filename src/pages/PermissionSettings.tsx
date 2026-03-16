@@ -429,23 +429,6 @@ const PermissionSettings = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Unsaved changes navigation blocker */}
-      <AlertDialog open={blocker.state === "blocked"} onOpenChange={(open) => { if (!open) blocker.reset?.(); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Ugemte ændringer</AlertDialogTitle>
-            <AlertDialogDescription>
-              Du har ugemte ændringer i rolletilladelser. Vil du gemme inden du forlader siden?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>Bliv på siden</AlertDialogCancel>
-            <Button variant="outline" onClick={() => blocker.proceed?.()}>Forlad uden at gemme</Button>
-            <Button onClick={async () => { await handleSave(); blocker.proceed?.(); }}>Gem og forlad</Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
