@@ -226,7 +226,7 @@ const TeamSettings = () => {
               </TableHeader>
               <TableBody>
                 {activeMembers.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailMember(m)}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {m.name}
@@ -240,6 +240,7 @@ const TeamSettings = () => {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{m.email}</TableCell>
                     <TableCell>{roleBadge(m.role)}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-muted-foreground">{(m as any).telefon || "—"}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{m.joined_at ? formatShortDate(m.joined_at) : "—"}</TableCell>
                     {perms.erFormand && (
                       <TableCell className="hidden md:table-cell">
