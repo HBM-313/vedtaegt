@@ -16,6 +16,8 @@ import MeetingDetail from "./pages/MeetingDetail";
 import ApprovalPage from "./pages/ApprovalPage";
 import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
+import TeamSettings from "./pages/TeamSettings";
+import OwnershipTransfer from "./pages/OwnershipTransfer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
