@@ -56,7 +56,7 @@ const Index = () => {
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <span className="text-base font-semibold">Bestyrelsesrum</span>
+            <span className="text-base font-semibold">Vedtægt</span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
