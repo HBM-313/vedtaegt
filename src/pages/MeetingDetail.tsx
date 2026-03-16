@@ -37,7 +37,7 @@ interface ApprovalRow {
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { orgId, orgName } = useOrg();
+  const { orgId, orgName, memberId } = useOrg();
   const perms = usePermissions();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
