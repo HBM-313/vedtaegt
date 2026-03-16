@@ -325,6 +325,20 @@ const MeetingDetail = () => {
         </div>
       </div>
 
+      {/* In-platform approval box */}
+      {meeting.status === "pending_approval" && (
+        <InPlatformApproval
+          meetingId={meeting.id}
+          orgId={meeting.org_id!}
+          orgName={orgName || ""}
+          meetingTitle={meeting.title}
+          godkendelseRunde={meeting.godkendelse_runde}
+          currentMemberId={memberId}
+          approvals={approvals}
+          onUpdate={() => { loadMeeting(); loadApprovals(); }}
+        />
+      )}
+
       {/* Rejection banner */}
       {meeting.status === "active" && meeting.afvist_at && meeting.afvist_kommentar && rejector && (
         <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 mb-6">
