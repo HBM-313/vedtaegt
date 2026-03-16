@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/components/AppLayout";
 import { formatShortDate } from "@/lib/format";
-import { Plus, FileText, ClipboardCheck, FolderOpen } from "lucide-react";
+import { Plus, FileText, ClipboardCheck, FolderOpen, AlertTriangle } from "lucide-react";
 
 interface Meeting {
   id: string;
@@ -36,12 +36,23 @@ const Dashboard = () => {
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletionDate, setDeletionDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (!orgId) return;
 
     const load = async () => {
       setLoading(true);
+
+      // Check deletion status
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("deletion_requested_at")
+        .eq("id", orgId)
+        .single();
+      if (orgData?.deletion_requested_at) {
+        setDeletionDate(new Date(new Date(orgData.deletion_requested_at).getTime() + 30 * 24 * 60 * 60 * 1000));
+      }
 
       const [meetingsRes, actionsRes, docsRes] = await Promise.all([
         supabase
@@ -118,6 +129,18 @@ const Dashboard = () => {
           Nyt møde
         </Button>
       </div>
+
+      {deletionDate && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3 mb-6">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-destructive">Sletning anmodet</p>
+            <p className="text-sm text-muted-foreground">
+              Din forening slettes den {formatShortDate(deletionDate)}.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Upcoming meetings */}
