@@ -137,11 +137,6 @@ const Documents = () => {
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 
-  // Block page if no permission
-  if (perms.loaded && !perms.kanSeDokumenter) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   const filtered = useMemo(() => {
     let result = docs;
     if (filterCat === "fra_moeder") result = result.filter((d) => d.kilde === "moede");
@@ -149,6 +144,11 @@ const Documents = () => {
     if (search.trim()) { const q = search.toLowerCase(); result = result.filter((d) => d.name.toLowerCase().includes(q)); }
     return result;
   }, [docs, filterCat, search]);
+
+  // Block page if no permission
+  if (perms.loaded && !perms.kanSeDokumenter) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleFileSelect = (f: File) => {
     if (f.size > MAX_FILE_SIZE) {
