@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOrg } from "@/components/AppLayout";
 import { logAuditEvent } from "@/lib/audit";
+import { getRoleLabel } from "@/lib/roles";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -390,7 +391,7 @@ const CreateMeeting = () => {
                   />
                   <div>
                     <p className="text-sm font-medium">{member.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{member.role}</p>
+                    <p className="text-xs text-muted-foreground">{getRoleLabel(member.role)}</p>
                   </div>
                 </label>
               ))}

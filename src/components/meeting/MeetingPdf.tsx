@@ -4,6 +4,7 @@ import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { getRoleLabel } from "@/lib/roles";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 10, fontFamily: "Helvetica" },
@@ -120,7 +121,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
             <Text style={styles.sectionTitle}>Deltagere</Text>
             {data!.participants.map((p, i) => (
               <Text key={i} style={styles.participant}>
-                {p.name} ({p.role})
+                {p.name} ({getRoleLabel(p.role)})
               </Text>
             ))}
           </View>

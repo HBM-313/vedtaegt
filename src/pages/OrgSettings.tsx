@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle } from "lucide-react";
+import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface Org {
@@ -50,7 +51,8 @@ const planBadge = (plan: string) => {
 };
 
 const OrgSettings = () => {
-  const { orgId, memberRole } = useOrg();
+  const { orgId } = useOrg();
+  const perms = usePermissions();
   const navigate = useNavigate();
   const [org, setOrg] = useState<Org | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,12 @@ const OrgSettings = () => {
   const [name, setName] = useState("");
   const [cvr, setCvr] = useState("");
 
+  // Board structure
+  const [maxBestyrelse, setMaxBestyrelse] = useState(5);
+  const [maxSuppleanter, setMaxSuppleanter] = useState(2);
+  const [savingBoard, setSavingBoard] = useState(false);
+  const [boardCounts, setBoardCounts] = useState({ bestyrelsesmedlem: 0, suppleant: 0 });
+
   // Usage
   const [usage, setUsage] = useState<UsageData>({ meetingsThisYear: 0, membersCount: 0, storageMb: 0 });
 
@@ -69,8 +77,6 @@ const OrgSettings = () => {
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  const isOwner = memberRole === "owner";
-
   const fetchData = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -78,7 +84,7 @@ const OrgSettings = () => {
     const [orgRes, meetingsRes, membersRes, docsRes] = await Promise.all([
       supabase.from("organizations").select("*").eq("id", orgId).single(),
       supabase.from("meetings").select("id").eq("org_id", orgId).gte("created_at", `${new Date().getFullYear()}-01-01`),
-      supabase.from("members").select("id").eq("org_id", orgId),
+      supabase.from("members").select("id, role").eq("org_id", orgId),
       supabase.from("documents").select("file_size_bytes").eq("org_id", orgId),
     ]);
 
@@ -87,6 +93,19 @@ const OrgSettings = () => {
       setOrg(o);
       setName(o.name);
       setCvr(o.cvr || "");
+      setMaxBestyrelse((o as any).max_bestyrelsesmedlemmer ?? 5);
+      setMaxSuppleanter((o as any).max_suppleanter ?? 2);
+    }
+
+    if (membersRes.data) {
+      const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => {
+        acc[m.role] = (acc[m.role] || 0) + 1;
+        return acc;
+      }, {});
+      setBoardCounts({
+        bestyrelsesmedlem: counts["bestyrelsesmedlem"] || 0,
+        suppleant: counts["suppleant"] || 0,
+      });
     }
 
     const totalBytes = docsRes.data?.reduce((sum, d) => sum + (d.file_size_bytes || 0), 0) || 0;
@@ -115,6 +134,24 @@ const OrgSettings = () => {
       toast.success("Indstillinger gemt.");
     }
     setSaving(false);
+  };
+
+  const handleSaveBoard = async () => {
+    if (!orgId) return;
+    setSavingBoard(true);
+    const { error } = await supabase
+      .from("organizations")
+      .update({
+        max_bestyrelsesmedlemmer: maxBestyrelse,
+        max_suppleanter: maxSuppleanter,
+      } as any)
+      .eq("id", orgId);
+    if (error) {
+      toast.error("Kunne ikke gemme bestyrelsesstruktur.");
+    } else {
+      toast.success("Bestyrelsesstruktur gemt.");
+    }
+    setSavingBoard(false);
   };
 
   const handleExport = async () => {
@@ -292,7 +329,51 @@ const OrgSettings = () => {
         </CardContent>
       </Card>
 
-      {/* Section 3: GDPR */}
+      {/* Section 2b: Bestyrelsesstruktur */}
+      {perms.kanOpdatereForening && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Bestyrelsesstruktur
+            </CardTitle>
+            <CardDescription>Konfigurér antal pladser i bestyrelsen.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="max-bestyrelse" className="text-xs">Maks. antal bestyrelsesmedlemmer</Label>
+                <Input
+                  id="max-bestyrelse"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={maxBestyrelse}
+                  onChange={(e) => setMaxBestyrelse(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-suppleanter" className="text-xs">Maks. antal suppleanter</Label>
+                <Input
+                  id="max-suppleanter"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={maxSuppleanter}
+                  onChange={(e) => setMaxSuppleanter(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Aktuel bestyrelse: {boardCounts.bestyrelsesmedlem} / {maxBestyrelse} bestyrelsesmedlemmer, {boardCounts.suppleant} / {maxSuppleanter} suppleanter
+            </p>
+            <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">
+              {savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -315,7 +396,7 @@ const OrgSettings = () => {
       </Card>
 
       {/* Section 4: Slet forening */}
-      {isOwner && (
+      {perms.kanOverdrageEjerskab && (
         <Card className="border-destructive/30">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 text-destructive">

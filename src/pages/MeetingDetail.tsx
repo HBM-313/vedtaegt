@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,13 +29,12 @@ interface Meeting {
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { orgId, memberRole, orgName } = useOrg();
+  const { orgId, orgName } = useOrg();
+  const perms = usePermissions();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
-
-  const isOwnerOrAdmin = memberRole === "owner" || memberRole === "admin";
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
@@ -137,7 +137,7 @@ const MeetingDetail = () => {
 
         {/* Status flow buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          {isOwnerOrAdmin && meeting.status === "draft" && (
+          {perms.kanRedigereMoeder && meeting.status === "draft" && (
             <Button
               size="sm"
               className="press-effect"
@@ -148,7 +148,7 @@ const MeetingDetail = () => {
               Start møde
             </Button>
           )}
-          {isOwnerOrAdmin && meeting.status === "active" && (
+          {perms.kanSendeTilGodkendelse && meeting.status === "active" && (
             <Button
               size="sm"
               className="press-effect"

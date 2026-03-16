@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const anonKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -54,8 +54,8 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    if (!callerMember || callerMember.role !== "owner") {
-      return new Response(JSON.stringify({ error: "Kun ejeren kan overdrage ejerskab." }), {
+    if (!callerMember || callerMember.role !== "formand") {
+      return new Response(JSON.stringify({ error: "Kun formanden kan overdrage formandsposten." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -113,14 +113,14 @@ const Signup = () => {
 
       if (orgError) throw orgError;
 
-      // 3. Create member with role 'owner'
+      // 3. Create member with role 'formand'
       const now = new Date().toISOString();
       const { error: memberError } = await supabase
         .from("members")
         .insert({
           org_id: org.id,
           user_id: authData.user.id,
-          role: "owner",
+          role: "formand",
           name: name.trim(),
           email,
           joined_at: now,
