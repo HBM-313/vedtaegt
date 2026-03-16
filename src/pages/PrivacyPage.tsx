@@ -84,7 +84,7 @@ const PrivacyPage = () => (
           <li><strong className="text-foreground">Dataportabilitet</strong> — ret til at modtage dine data i et maskinlæsbart format</li>
         </ul>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Kontakt os på <a href="mailto:privatliv@bestyrelsesrum.dk" className="text-primary hover:underline">privatliv@bestyrelsesrum.dk</a> for at udøve dine rettigheder.
+          Kontakt os på <a href="mailto:privatliv@vedtægt.dk" className="text-primary hover:underline">privatliv@vedtægt.dk</a> for at udøve dine rettigheder.
         </p>
       </section>
 
