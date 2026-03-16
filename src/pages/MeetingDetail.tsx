@@ -286,7 +286,8 @@ const MeetingDetail = () => {
 
   const approvedCount = approvals.filter((a) => a.status === "godkendt").length;
   const totalCount = approvals.length;
-  const pendingCount = approvals.filter((a) => a.status === "afventer").length;
+  const realPending = approvals.filter((a) => a.status === "afventer" && a.member_id !== meeting.sendt_af);
+  const pendingCount = realPending.length;
 
   return (
     <div>
