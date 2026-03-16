@@ -332,6 +332,8 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          er_fravaerende: boolean | null
+          fravaerende_siden: string | null
           id: string
           invited_at: string | null
           joined_at: string | null
@@ -345,6 +347,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           email: string
+          er_fravaerende?: boolean | null
+          fravaerende_siden?: string | null
           id?: string
           invited_at?: string | null
           joined_at?: string | null
@@ -358,6 +362,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           email?: string
+          er_fravaerende?: boolean | null
+          fravaerende_siden?: string | null
           id?: string
           invited_at?: string | null
           joined_at?: string | null
@@ -441,6 +447,7 @@ export type Database = {
           max_bestyrelsesmedlemmer: number | null
           max_suppleanter: number | null
           name: string
+          permission_version: number | null
           plan: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -456,6 +463,7 @@ export type Database = {
           max_bestyrelsesmedlemmer?: number | null
           max_suppleanter?: number | null
           name: string
+          permission_version?: number | null
           plan?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -471,6 +479,7 @@ export type Database = {
           max_bestyrelsesmedlemmer?: number | null
           max_suppleanter?: number | null
           name?: string
+          permission_version?: number | null
           plan?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -526,11 +535,83 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          arver_formand_ved_fravaer: boolean | null
+          id: string
+          kan_aendre_roller: boolean | null
+          kan_fjerne_medlemmer: boolean | null
+          kan_godkende_referat: boolean | null
+          kan_invitere_medlemmer: boolean | null
+          kan_lukke_andres_handlingspunkter: boolean | null
+          kan_oprette_moeder: boolean | null
+          kan_redigere_forening: boolean | null
+          kan_redigere_moeder: boolean | null
+          kan_se_indstillinger: boolean | null
+          kan_sende_til_godkendelse: boolean | null
+          kan_slette_dokumenter: boolean | null
+          kan_uploade_dokumenter: boolean | null
+          org_id: string | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          arver_formand_ved_fravaer?: boolean | null
+          id?: string
+          kan_aendre_roller?: boolean | null
+          kan_fjerne_medlemmer?: boolean | null
+          kan_godkende_referat?: boolean | null
+          kan_invitere_medlemmer?: boolean | null
+          kan_lukke_andres_handlingspunkter?: boolean | null
+          kan_oprette_moeder?: boolean | null
+          kan_redigere_forening?: boolean | null
+          kan_redigere_moeder?: boolean | null
+          kan_se_indstillinger?: boolean | null
+          kan_sende_til_godkendelse?: boolean | null
+          kan_slette_dokumenter?: boolean | null
+          kan_uploade_dokumenter?: boolean | null
+          org_id?: string | null
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          arver_formand_ved_fravaer?: boolean | null
+          id?: string
+          kan_aendre_roller?: boolean | null
+          kan_fjerne_medlemmer?: boolean | null
+          kan_godkende_referat?: boolean | null
+          kan_invitere_medlemmer?: boolean | null
+          kan_lukke_andres_handlingspunkter?: boolean | null
+          kan_oprette_moeder?: boolean | null
+          kan_redigere_forening?: boolean | null
+          kan_redigere_moeder?: boolean | null
+          kan_se_indstillinger?: boolean | null
+          kan_sende_til_godkendelse?: boolean | null
+          kan_slette_dokumenter?: boolean | null
+          kan_uploade_dokumenter?: boolean | null
+          org_id?: string | null
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      insert_default_permissions: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
       user_is_org_member: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
