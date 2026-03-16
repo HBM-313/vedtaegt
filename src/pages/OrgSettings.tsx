@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle } from "lucide-react";
+import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle, Users } from "lucide-react";
 import { toast } from "sonner";
 
 interface Org {
