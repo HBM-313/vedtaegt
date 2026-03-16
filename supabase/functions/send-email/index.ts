@@ -6,10 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Temporary sender until domain is verified
+// Temporary sender until bestyrelsesrum.dk domain is verified in Resend
 const FROM_EMAIL = "Bestyrelsesrum <onboarding@resend.dev>";
 // When domain is ready, switch to:
-// const FROM_EMAIL = "Bestyrelsesrum <service@vedtægt.dk>";
+// const FROM_EMAIL = "Bestyrelsesrum <service@bestyrelsesrum.dk>";
 
 const BASE_URL = "https://id-preview--9fc10c4b-e8ee-4087-b0a5-eeb410a0f69e.lovable.app";
 
@@ -138,7 +138,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
     Regnskabsdokumenter opbevares dog i 5 år jf. Bogføringsloven.
   </p>
   <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 0;">
-    Fortrød du? Kontakt os på <a href="mailto:support@vedtægt.dk" style="color:#1e40af;">support@vedtægt.dk</a> inden ${data.deletionDate}.
+    Fortrød du? Kontakt os på <a href="mailto:support@bestyrelsesrum.dk" style="color:#1e40af;">support@bestyrelsesrum.dk</a> inden ${data.deletionDate}.
   </p>
 </div>
 </body></html>`,
