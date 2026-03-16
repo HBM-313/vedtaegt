@@ -116,11 +116,37 @@ Deno.serve(async (req) => {
       metadata: { members_count: members.length },
     });
 
+    // Send approval request emails to each member
+    const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    const meetingDate = meeting.meeting_date
+      ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
+      : "ukendt dato";
+
+    for (const approval of approvals) {
+      const member = members.find((m) => m.id === approval.member_id);
+      if (!member) continue;
+
+      await fetch(sendEmailUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: member.email,
+          templateName: "approval_request",
+          templateData: {
+            meetingTitle: meeting.title,
+            meetingDate,
+            token: approval.token,
+          },
+        }),
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         approvals_created: approvals.length,
-        message: `Godkendelseslinks oprettet for ${approvals.length} medlemmer.`,
+        emails_sent: approvals.length,
+        message: `Godkendelseslinks oprettet og mails sendt til ${approvals.length} medlemmer.`,
       }),
       {
         status: 200,
