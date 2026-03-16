@@ -24,12 +24,13 @@ interface Meeting {
   id: string; title: string; meeting_date: string | null;
   location: string | null; status: string | null; approved_at: string | null; org_id: string | null;
   godkendelse_frist_dage: number | null; afvist_af: string | null; afvist_at: string | null;
-  afvist_kommentar: string | null; godkendelse_runde: number | null;
+  afvist_kommentar: string | null; godkendelse_runde: number | null; sendt_af: string | null;
 }
 
 interface ApprovalRow {
   id: string; member_id: string | null; status: string | null;
   approved_at: string | null; paamindelse_sendt_at: string | null;
+  afvist_kommentar: string | null;
   members: { name: string; role: string } | null;
 }
 
