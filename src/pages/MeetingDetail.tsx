@@ -29,13 +29,12 @@ interface Meeting {
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { orgId, memberRole, orgName } = useOrg();
+  const { orgId, orgName } = useOrg();
+  const perms = usePermissions();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusLoading, setStatusLoading] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
-
-  const isOwnerOrAdmin = memberRole === "owner" || memberRole === "admin";
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
