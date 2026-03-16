@@ -10,6 +10,8 @@ interface ApprovalData {
   id: string;
   approved_at: string | null;
   token_expires_at: string | null;
+  meeting_id: string;
+  org_id: string;
   meeting: {
     title: string;
     meeting_date: string | null;
