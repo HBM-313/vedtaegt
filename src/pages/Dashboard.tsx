@@ -31,7 +31,7 @@ interface Document {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { orgId } = useOrg();
+  const { orgId, memberId } = useOrg();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
