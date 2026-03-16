@@ -136,7 +136,24 @@ const OrgSettings = () => {
     setSaving(false);
   };
 
-  const handleExport = async () => {
+  const handleSaveBoard = async () => {
+    if (!orgId) return;
+    setSavingBoard(true);
+    const { error } = await supabase
+      .from("organizations")
+      .update({
+        max_bestyrelsesmedlemmer: maxBestyrelse,
+        max_suppleanter: maxSuppleanter,
+      } as any)
+      .eq("id", orgId);
+    if (error) {
+      toast.error("Kunne ikke gemme bestyrelsesstruktur.");
+    } else {
+      toast.success("Bestyrelsesstruktur gemt.");
+    }
+    setSavingBoard(false);
+  };
+
     if (!orgId) return;
     setExporting(true);
 
