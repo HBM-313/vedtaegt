@@ -218,6 +218,7 @@ const TeamSettings = () => {
                   <TableHead>Navn</TableHead>
                   <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                   <TableHead>Rolle</TableHead>
+                  <TableHead className="hidden lg:table-cell">Telefon</TableHead>
                   <TableHead className="hidden md:table-cell">Tilsluttet</TableHead>
                   {perms.erFormand && <TableHead className="hidden md:table-cell">Fravær</TableHead>}
                   {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && <TableHead className="text-right">Handlinger</TableHead>}
