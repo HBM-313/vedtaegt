@@ -9,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -17,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SettingsTabs from "@/components/SettingsTabs";
-import { Lock, RotateCcw, Info, Save } from "lucide-react";
+import { Lock, RotateCcw, Info, Save, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 const ROLE_ORDER: DanishRole[] = ["formand", "naestformand", "kasserer", "bestyrelsesmedlem", "suppleant"];
@@ -30,8 +29,7 @@ const ROLE_BADGE_STYLES: Record<string, string> = {
   suppleant: "bg-muted/50 text-muted-foreground/70 border-border italic",
 };
 
-type PermKey = keyof Omit<RolePermission, "arver_formand_ved_fravaer">;
-type AllPermKey = PermKey | "arver_formand_ved_fravaer";
+type AllPermKey = keyof Omit<RolePermission, never>;
 
 interface PermField {
   key: AllPermKey;
@@ -60,14 +58,18 @@ const VIKARIAT_FIELD: PermField = {
   category: "Vikariat",
 };
 
-// Locked TRUE for formand (trigger-enforced)
-const LOCKED_FORMAND_KEYS: Set<AllPermKey> = new Set([
-  "kan_aendre_roller", "kan_redigere_forening", "kan_slette_dokumenter",
-  "kan_invitere_medlemmer", "kan_fjerne_medlemmer", "kan_se_indstillinger",
-]);
+const ALL_PERM_KEYS: AllPermKey[] = [
+  ...PERM_FIELDS.map(f => f.key),
+  "arver_formand_ved_fravaer",
+];
 
 // Locked TRUE for all roles
 const LOCKED_ALL_KEYS: Set<AllPermKey> = new Set(["kan_godkende_referat"]);
+
+// Team permissions locked OFF for non-næstformand/formand
+const TEAM_ONLY_NAESTFORMAND: Set<AllPermKey> = new Set([
+  "kan_invitere_medlemmer", "kan_fjerne_medlemmer",
+]);
 
 type PermState = Record<DanishRole, Record<AllPermKey, boolean>>;
 
@@ -79,21 +81,11 @@ function toPermState(rp: Record<string, RolePermission>): PermState {
       state[role] = {} as Record<AllPermKey, boolean>;
       continue;
     }
-    state[role] = {
-      kan_oprette_moeder: p.kan_oprette_moeder,
-      kan_redigere_moeder: p.kan_redigere_moeder,
-      kan_sende_til_godkendelse: p.kan_sende_til_godkendelse,
-      kan_godkende_referat: p.kan_godkende_referat,
-      kan_uploade_dokumenter: p.kan_uploade_dokumenter,
-      kan_slette_dokumenter: p.kan_slette_dokumenter,
-      kan_lukke_andres_handlingspunkter: p.kan_lukke_andres_handlingspunkter,
-      kan_invitere_medlemmer: p.kan_invitere_medlemmer,
-      kan_fjerne_medlemmer: p.kan_fjerne_medlemmer,
-      kan_aendre_roller: p.kan_aendre_roller,
-      kan_se_indstillinger: p.kan_se_indstillinger,
-      kan_redigere_forening: p.kan_redigere_forening,
-      arver_formand_ved_fravaer: p.arver_formand_ved_fravaer,
-    };
+    const entry = {} as Record<AllPermKey, boolean>;
+    for (const key of ALL_PERM_KEYS) {
+      entry[key] = !!(p as any)[key];
+    }
+    state[role] = entry;
   }
   return state;
 }
@@ -102,29 +94,48 @@ function deepEqual(a: PermState, b: PermState): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function countActive(perms: Record<AllPermKey, boolean>, role: DanishRole): number {
+  const fields = getFieldsForRole(role);
+  return fields.reduce((n, f) => n + (perms[f.key] ? 1 : 0), 0);
+}
+
+function getFieldsForRole(role: DanishRole): PermField[] {
+  const fields = [...PERM_FIELDS];
+  if (role === "naestformand") fields.push(VIKARIAT_FIELD);
+  return fields;
+}
+
+function groupFields(fields: PermField[]): Record<string, PermField[]> {
+  const groups: Record<string, PermField[]> = {};
+  for (const f of fields) {
+    if (!groups[f.category]) groups[f.category] = [];
+    groups[f.category].push(f);
+  }
+  return groups;
+}
+
 const PermissionSettings = () => {
-  const { orgId, refetchPermissions, rolePermissions } = useOrg();
+  const { orgId, refetchPermissions } = useOrg();
   const perms = usePermissions();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [openRole, setOpenRole] = useState<string | null>(null);
 
   const [original, setOriginal] = useState<PermState | null>(null);
   const [pending, setPending] = useState<PermState | null>(null);
 
   const hasUnsaved = original && pending ? !deepEqual(original, pending) : false;
 
-  // Warn on browser close/refresh with unsaved changes
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (hasUnsaved) { e.preventDefault(); }
+      if (hasUnsaved) e.preventDefault();
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsaved]);
 
-  // Load permissions from context or fetch
   const loadPermissions = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -136,21 +147,9 @@ const PermissionSettings = () => {
     if (data) {
       const map: Record<string, RolePermission> = {};
       data.forEach((row: any) => {
-        map[row.role] = {
-          kan_oprette_moeder: row.kan_oprette_moeder,
-          kan_redigere_moeder: row.kan_redigere_moeder,
-          kan_sende_til_godkendelse: row.kan_sende_til_godkendelse,
-          kan_godkende_referat: row.kan_godkende_referat,
-          kan_uploade_dokumenter: row.kan_uploade_dokumenter,
-          kan_slette_dokumenter: row.kan_slette_dokumenter,
-          kan_lukke_andres_handlingspunkter: row.kan_lukke_andres_handlingspunkter,
-          kan_invitere_medlemmer: row.kan_invitere_medlemmer,
-          kan_fjerne_medlemmer: row.kan_fjerne_medlemmer,
-          kan_aendre_roller: row.kan_aendre_roller,
-          kan_se_indstillinger: row.kan_se_indstillinger,
-          kan_redigere_forening: row.kan_redigere_forening,
-          arver_formand_ved_fravaer: row.arver_formand_ved_fravaer,
-        };
+        const entry = {} as any;
+        for (const key of ALL_PERM_KEYS) entry[key] = row[key];
+        map[row.role] = entry;
       });
       const state = toPermState(map);
       setOriginal(state);
@@ -166,63 +165,65 @@ const PermissionSettings = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleToggle = (role: DanishRole, key: AllPermKey) => {
-    if (!pending) return;
-    setPending((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [role]: { ...prev[role], [key]: !prev[role][key] },
-      };
-    });
-  };
-
   const isLocked = (role: DanishRole, key: AllPermKey): boolean => {
-    if (role === "formand") return true; // entire formand section is locked
+    if (role === "formand") return true;
     if (LOCKED_ALL_KEYS.has(key)) return true;
     if (key === "arver_formand_ved_fravaer" && role === "naestformand") return true;
+    // Team perms locked OFF for non-næstformand
+    if (TEAM_ONLY_NAESTFORMAND.has(key) && role !== "naestformand") return true;
     return false;
+  };
+
+  const getLockedValue = (role: DanishRole, key: AllPermKey): boolean => {
+    if (role === "formand") return true;
+    if (LOCKED_ALL_KEYS.has(key)) return true;
+    if (key === "arver_formand_ved_fravaer" && role === "naestformand") return true;
+    // Team perms locked OFF for non-næstformand
+    if (TEAM_ONLY_NAESTFORMAND.has(key) && role !== "naestformand") return false;
+    return true;
   };
 
   const getLockTooltip = (role: DanishRole, key: AllPermKey): string | null => {
     if (role === "formand") return "Formanden har altid alle tilladelser.";
     if (LOCKED_ALL_KEYS.has(key)) return "Alle bestyrelsesmedlemmer har ret til at godkende referater.";
     if (key === "arver_formand_ved_fravaer") return "Næstformanden arver altid formandens rettigheder ved fravær.";
+    if (TEAM_ONLY_NAESTFORMAND.has(key) && role !== "naestformand") return "Denne tilladelse kan kun gives til næstformanden.";
     return null;
+  };
+
+  const handleToggle = (role: DanishRole, key: AllPermKey) => {
+    if (!pending || isLocked(role, key)) return;
+    setPending((prev) => {
+      if (!prev) return prev;
+      return { ...prev, [role]: { ...prev[role], [key]: !prev[role][key] } };
+    });
   };
 
   const handleSave = async () => {
     if (!orgId || !pending || !original) return;
     setSaving(true);
-
     try {
-      // Calculate diff and build audit changes
       const changes: { role: string; felt: string; fra: boolean; til: boolean }[] = [];
       const updates: { role: DanishRole; data: Record<string, boolean> }[] = [];
 
       for (const role of ROLE_ORDER) {
-        if (role === "formand") continue; // formand is locked
+        if (role === "formand") continue;
         const diff: Record<string, boolean> = {};
         let hasDiff = false;
-        for (const field of [...PERM_FIELDS, VIKARIAT_FIELD]) {
-          const key = field.key;
-          if (isLocked(role, key)) continue;
-          if (role !== "naestformand" && key === "arver_formand_ved_fravaer") continue;
-          if (pending[role][key] !== original[role][key]) {
-            diff[key] = pending[role][key];
-            changes.push({ role, felt: field.label, fra: original[role][key], til: pending[role][key] });
+        const fields = getFieldsForRole(role);
+        for (const field of fields) {
+          if (isLocked(role, field.key)) continue;
+          if (pending[role][field.key] !== original[role][field.key]) {
+            diff[field.key] = pending[role][field.key];
+            changes.push({ role, felt: field.label, fra: original[role][field.key], til: pending[role][field.key] });
             hasDiff = true;
           }
         }
         if (hasDiff) updates.push({ role, data: diff });
       }
 
-      if (updates.length === 0) {
-        setSaving(false);
-        return;
-      }
+      if (updates.length === 0) { setSaving(false); return; }
 
-      // Update each changed role
       for (const upd of updates) {
         const { error } = await supabase
           .from("role_permissions")
@@ -232,8 +233,6 @@ const PermissionSettings = () => {
         if (error) throw error;
       }
 
-      // Increment permission_version
-      await supabase.rpc("user_is_org_member", { _org_id: orgId }); // just to verify
       const { data: orgRow } = await supabase
         .from("organizations")
         .select("permission_version")
@@ -245,7 +244,6 @@ const PermissionSettings = () => {
         .update({ permission_version: currentVersion + 1 } as any)
         .eq("id", orgId);
 
-      // Log audit
       await logAuditEvent("org.permissions_updated", "organization", orgId, {
         changes: JSON.stringify(changes),
       } as any);
@@ -264,7 +262,6 @@ const PermissionSettings = () => {
     setResetting(true);
     try {
       await supabase.rpc("insert_default_permissions", { p_org_id: orgId });
-
       const { data: orgRow } = await supabase
         .from("organizations")
         .select("permission_version")
@@ -275,7 +272,6 @@ const PermissionSettings = () => {
         .from("organizations")
         .update({ permission_version: currentVersion + 1 } as any)
         .eq("id", orgId);
-
       await logAuditEvent("org.permissions_reset", "organization", orgId);
       await loadPermissions();
       refetchPermissions();
@@ -287,15 +283,8 @@ const PermissionSettings = () => {
     setShowResetDialog(false);
   };
 
-  const groupedFields = (role: DanishRole) => {
-    const fields = [...PERM_FIELDS];
-    if (role === "naestformand") fields.push(VIKARIAT_FIELD);
-    const groups: Record<string, PermField[]> = {};
-    for (const f of fields) {
-      if (!groups[f.category]) groups[f.category] = [];
-      groups[f.category].push(f);
-    }
-    return groups;
+  const toggleAccordion = (role: string) => {
+    setOpenRole(prev => prev === role ? null : role);
   };
 
   if (loading) {
@@ -304,7 +293,7 @@ const PermissionSettings = () => {
         <SettingsTabs />
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-96" />
-        {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
       </div>
     );
   }
@@ -320,95 +309,118 @@ const PermissionSettings = () => {
             Tilpas hvad de forskellige roller må i din forening. Ændringer træder i kraft for alle med den pågældende rolle når du trykker Gem.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowResetDialog(true)}
-          disabled={resetting}
-        >
+        <Button variant="outline" size="sm" onClick={() => setShowResetDialog(true)} disabled={resetting}>
           <RotateCcw className="h-4 w-4 mr-1" />
           Nulstil til standard
         </Button>
       </div>
 
-      {ROLE_ORDER.map((role) => {
-        const groups = groupedFields(role);
-        const isFormand = role === "formand";
+      <div className="space-y-2">
+        {ROLE_ORDER.map((role) => {
+          const isFormand = role === "formand";
+          const isOpen = openRole === role;
+          const fields = getFieldsForRole(role);
+          const groups = groupFields(fields);
+          const activeCount = pending ? countActive(pending[role], role) : 0;
 
-        return (
-          <Card key={role}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Badge variant="outline" className={ROLE_BADGE_STYLES[role]}>
-                  {getRoleLabel(role)}
-                </Badge>
-              </CardTitle>
-              {isFormand && (
-                <div className="flex items-start gap-2 bg-muted/50 border border-border rounded-md p-3 mt-2">
-                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground">
-                    Formanden har altid alle tilladelser. Dette kan ikke ændres for at sikre at foreningen altid har én bruger med fuld adgang.
-                  </p>
+          return (
+            <div key={role} className="border border-border rounded-lg overflow-hidden bg-card">
+              {/* Accordion Header */}
+              <button
+                type="button"
+                onClick={() => toggleAccordion(role)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={ROLE_BADGE_STYLES[role]}>
+                    {getRoleLabel(role)}
+                  </Badge>
                 </div>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(groups).map(([category, fields], ci) => (
-                <div key={category}>
-                  {ci > 0 && <Separator className="mb-4" />}
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                    {category}
-                  </p>
-                  <div className="space-y-3">
-                    {fields.map((field) => {
-                      const locked = isLocked(role, field.key);
-                      const checked = pending?.[role]?.[field.key] ?? false;
-                      const lockTip = getLockTooltip(role, field.key);
+                <div className="flex items-center gap-3">
+                  {isFormand ? (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Lock className="h-3.5 w-3.5" /> Låst
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="h-2 w-2 rounded-full bg-primary inline-block" />
+                      {activeCount} TIL
+                    </span>
+                  )}
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+                </div>
+              </button>
 
-                      return (
-                        <div key={field.key} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-foreground">{field.label}</span>
-                            {locked && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="max-w-xs text-xs">{lockTip}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                          <Switch
-                            checked={locked ? true : checked}
-                            disabled={locked}
-                            onCheckedChange={() => handleToggle(role, field.key)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
+              {/* Accordion Content */}
+              <div
+                className="transition-all duration-200 ease-in-out overflow-hidden"
+                style={{
+                  maxHeight: isOpen ? "2000px" : "0px",
+                  opacity: isOpen ? 1 : 0,
+                }}
+              >
+                <div className="px-4 pb-4 pt-1 space-y-4">
+                  {isFormand && (
+                    <div className="flex items-start gap-2 bg-muted/50 border border-border rounded-md p-3">
+                      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-sm text-muted-foreground">
+                        Formanden har altid alle tilladelser. Dette kan ikke ændres for at sikre at foreningen altid har én bruger med fuld adgang.
+                      </p>
+                    </div>
+                  )}
+
+                  {Object.entries(groups).map(([category, catFields], ci) => (
+                    <div key={category}>
+                      {ci > 0 && <Separator className="mb-4" />}
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        {category}
+                      </p>
+                      <div className="space-y-3">
+                        {catFields.map((field) => {
+                          const locked = isLocked(role, field.key);
+                          const checked = locked ? getLockedValue(role, field.key) : (pending?.[role]?.[field.key] ?? false);
+                          const lockTip = getLockTooltip(role, field.key);
+
+                          return (
+                            <div key={field.key} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-foreground">{field.label}</span>
+                                {locked && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="max-w-xs text-xs">{lockTip}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                              <Switch
+                                checked={checked}
+                                disabled={locked}
+                                onCheckedChange={() => handleToggle(role, field.key)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        );
-      })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex justify-end sticky bottom-4">
-        <Button
-          onClick={handleSave}
-          disabled={!hasUnsaved || saving}
-          size="lg"
-          className={hasUnsaved ? "shadow-lg" : ""}
-        >
+        <Button onClick={handleSave} disabled={!hasUnsaved || saving} size="lg" className={hasUnsaved ? "shadow-lg" : ""}>
           <Save className="h-4 w-4 mr-2" />
           {saving ? "Gemmer..." : "Gem tilladelser"}
         </Button>
       </div>
 
-      {/* Reset confirmation */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
