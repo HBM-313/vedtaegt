@@ -17,6 +17,7 @@ import ApprovalPage from "./pages/ApprovalPage";
 import Documents from "./pages/Documents";
 import ActionItems from "./pages/ActionItems";
 import TeamSettings from "./pages/TeamSettings";
+import OrgSettings from "./pages/OrgSettings";
 import OwnershipTransfer from "./pages/OwnershipTransfer";
 import NotFound from "./pages/NotFound";
 
