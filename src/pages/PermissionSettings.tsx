@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Navigate, useBlocker } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg, type RolePermission } from "@/components/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -115,10 +115,14 @@ const PermissionSettings = () => {
 
   const hasUnsaved = original && pending ? !deepEqual(original, pending) : false;
 
-  // Block navigation with unsaved changes
-  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
-    hasUnsaved && currentLocation.pathname !== nextLocation.pathname
-  );
+  // Warn on browser close/refresh with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasUnsaved) { e.preventDefault(); }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsaved]);
 
   // Load permissions from context or fetch
   const loadPermissions = useCallback(async () => {
@@ -422,23 +426,6 @@ const PermissionSettings = () => {
             >
               {resetting ? "Nulstiller..." : "Ja, nulstil"}
             </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Unsaved changes navigation blocker */}
-      <AlertDialog open={blocker.state === "blocked"} onOpenChange={(open) => { if (!open) blocker.reset?.(); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Ugemte ændringer</AlertDialogTitle>
-            <AlertDialogDescription>
-              Du har ugemte ændringer i rolletilladelser. Vil du gemme inden du forlader siden?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>Bliv på siden</AlertDialogCancel>
-            <Button variant="outline" onClick={() => blocker.proceed?.()}>Forlad uden at gemme</Button>
-            <Button onClick={async () => { await handleSave(); blocker.proceed?.(); }}>Gem og forlad</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
