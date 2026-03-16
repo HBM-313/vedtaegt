@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
           to: member.email,
           templateName: "approval_reminder",
           templateData: {
-            meetingTitle: meeting.title,
+          meetingTitle: meetingData.title,
             token: approval.token,
             recipientName: member.name,
             approvedCount: done,
