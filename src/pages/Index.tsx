@@ -38,10 +38,10 @@ const Index = () => {
             <span className="text-base font-semibold tracking-display">Vedtægt</span>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Log ind
             </Button>
-            <Button size="sm" onClick={() => navigate("/auth")}>
+            <Button size="sm" onClick={() => navigate("/opret-konto")}>
               Opret konto
             </Button>
           </div>
@@ -62,7 +62,7 @@ const Index = () => {
             dokumenthåndtering og revisionsspor. Bygget til danske foreninger.
           </p>
           <div className="mt-8 flex gap-3">
-            <Button size="sm" onClick={() => navigate("/auth")} className="press-effect">
+            <Button size="sm" onClick={() => navigate("/opret-konto")} className="press-effect">
               Kom i gang gratis
             </Button>
             <Button variant="outline" size="sm" className="press-effect">
