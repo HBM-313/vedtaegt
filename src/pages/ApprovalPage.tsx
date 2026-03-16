@@ -41,7 +41,7 @@ const ApprovalPage = () => {
       // Fetch approval by token
       const { data: approval, error: approvalError } = await supabase
         .from("approvals")
-        .select("id, approved_at, token_expires_at, meeting_id, meetings(title, meeting_date, organizations(name))")
+        .select("id, approved_at, token_expires_at, meeting_id, meetings(title, meeting_date, org_id, organizations(name))")
         .eq("token", token)
         .maybeSingle();
 
