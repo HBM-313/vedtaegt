@@ -82,6 +82,8 @@ const ApprovalPage = () => {
         id: approval.id,
         approved_at: approval.approved_at,
         token_expires_at: approval.token_expires_at,
+        meeting_id: approval.meeting_id!,
+        org_id: (meetingData as any)?.org_id || "",
         meeting: {
           title: meetingData?.title || "",
           meeting_date: meetingData?.meeting_date || null,
