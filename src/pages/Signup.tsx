@@ -113,6 +113,9 @@ const Signup = () => {
 
       if (orgError) throw orgError;
 
+      // 2b. Seed default role permissions
+      await supabase.rpc("insert_default_permissions", { p_org_id: org.id });
+
       // 3. Create member with role 'formand'
       const now = new Date().toISOString();
       const { error: memberError } = await supabase

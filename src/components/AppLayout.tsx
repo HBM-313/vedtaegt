@@ -192,6 +192,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               if (orgError) {
                 console.error("Failed to create org from pending signup:", orgError);
               } else {
+                // Seed default role permissions
+                await supabase.rpc("insert_default_permissions", { p_org_id: org.id });
+
                 // Create member
                 const now = new Date().toISOString();
                 const { error: memberError } = await supabase
