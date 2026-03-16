@@ -118,6 +118,7 @@ const MeetingDetail = () => {
         afvist_af: null,
         afvist_at: null,
         afvist_kommentar: null,
+        sendt_af: memberId,
       }).eq("id", id);
 
       // Delete existing pending approvals
