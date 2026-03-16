@@ -46,6 +46,7 @@ interface PdfData {
   actionItems: { title: string; assignee: string; due_date: string | null }[];
   participants: { name: string; role: string }[];
   approvals: { name: string; role: string; approved_at: string | null }[];
+  documents: { name: string; category: string | null; uploader: string; created_at: string | null; agenda_item_title: string | null }[];
 }
 
 const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
