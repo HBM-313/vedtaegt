@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -13,18 +14,14 @@ import { ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 
 interface ActionItem {
-  id: string;
-  title: string;
-  status: string | null;
-  due_date: string | null;
-  meeting_id: string | null;
-  assigned_to: string | null;
-  meeting_title?: string;
-  assignee_name?: string;
+  id: string; title: string; status: string | null; due_date: string | null;
+  meeting_id: string | null; assigned_to: string | null;
+  meeting_title?: string; assignee_name?: string;
 }
 
 const ActionItems = () => {
   const { orgId, memberId } = useOrg();
+  const perms = usePermissions();
   const navigate = useNavigate();
   const [items, setItems] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,35 +31,22 @@ const ActionItems = () => {
   const fetchItems = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("action_items")
+    const { data } = await supabase.from("action_items")
       .select("id, title, status, due_date, meeting_id, assigned_to")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false });
+      .eq("org_id", orgId).order("created_at", { ascending: false });
 
     if (data && data.length > 0) {
       const meetingIds = [...new Set(data.map((d) => d.meeting_id).filter(Boolean))] as string[];
       const memberIds = [...new Set(data.map((d) => d.assigned_to).filter(Boolean))] as string[];
-
       const [meetingsRes, membersRes] = await Promise.all([
-        meetingIds.length > 0
-          ? supabase.from("meetings").select("id, title").in("id", meetingIds)
-          : Promise.resolve({ data: [] }),
-        memberIds.length > 0
-          ? supabase.from("members").select("id, name").in("id", memberIds)
-          : Promise.resolve({ data: [] }),
+        meetingIds.length > 0 ? supabase.from("meetings").select("id, title").in("id", meetingIds) : Promise.resolve({ data: [] }),
+        memberIds.length > 0 ? supabase.from("members").select("id, name").in("id", memberIds) : Promise.resolve({ data: [] }),
       ]);
-
       const meetingMap: Record<string, string> = {};
       meetingsRes.data?.forEach((m) => { meetingMap[m.id] = m.title; });
       const memberMap: Record<string, string> = {};
       membersRes.data?.forEach((m) => { memberMap[m.id] = m.name; });
-
-      setItems(data.map((d) => ({
-        ...d,
-        meeting_title: d.meeting_id ? meetingMap[d.meeting_id] : undefined,
-        assignee_name: d.assigned_to ? memberMap[d.assigned_to] : undefined,
-      })));
+      setItems(data.map((d) => ({ ...d, meeting_title: d.meeting_id ? meetingMap[d.meeting_id] : undefined, assignee_name: d.assigned_to ? memberMap[d.assigned_to] : undefined })));
     } else {
       setItems([]);
     }
@@ -80,43 +64,42 @@ const ActionItems = () => {
   }, [items, showMine, memberId, statusFilter]);
 
   const toggleStatus = async (item: ActionItem) => {
+    const isOwnTask = item.assigned_to === memberId;
+    if (!isOwnTask && !perms.kanLukkeAndresHandlingspunkter) {
+      toast.error("Du har ikke tilladelse til at ændre andres handlingspunkter.");
+      return;
+    }
+
     const newStatus = item.status === "done" ? "open" : "done";
     await supabase.from("action_items").update({ status: newStatus }).eq("id", item.id);
-
     if (newStatus === "done") {
       await logAuditEvent("action_item.completed", "action_item", item.id, { title: item.title });
       toast.success("Handlingspunkt markeret som afsluttet");
     } else {
       toast.success("Handlingspunkt genåbnet");
     }
-
     setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, status: newStatus } : i));
   };
 
-  const isOverdue = (item: ActionItem) =>
-    item.status !== "done" && item.due_date && new Date(item.due_date) < new Date();
+  const isOverdue = (item: ActionItem) => item.status !== "done" && item.due_date && new Date(item.due_date) < new Date();
+
+  const canToggle = (item: ActionItem) => {
+    const isOwn = item.assigned_to === memberId;
+    return isOwn || perms.kanLukkeAndresHandlingspunkter;
+  };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Handlingspunkter</h1>
-
       <div className="flex flex-wrap gap-2">
-        <Button variant={statusFilter === "all" && !showMine ? "default" : "outline"} size="sm"
-          onClick={() => { setStatusFilter("all"); setShowMine(false); }}>Alle</Button>
-        <Button variant={showMine ? "default" : "outline"} size="sm"
-          onClick={() => setShowMine(!showMine)}>Mine</Button>
-        <Button variant={statusFilter === "open" ? "default" : "outline"} size="sm"
-          onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}>Åbne</Button>
-        <Button variant={statusFilter === "done" ? "default" : "outline"} size="sm"
-          onClick={() => setStatusFilter(statusFilter === "done" ? "all" : "done")}>Afsluttede</Button>
+        <Button variant={statusFilter === "all" && !showMine ? "default" : "outline"} size="sm" onClick={() => { setStatusFilter("all"); setShowMine(false); }}>Alle</Button>
+        <Button variant={showMine ? "default" : "outline"} size="sm" onClick={() => setShowMine(!showMine)}>Mine</Button>
+        <Button variant={statusFilter === "open" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}>Åbne</Button>
+        <Button variant={statusFilter === "done" ? "default" : "outline"} size="sm" onClick={() => setStatusFilter(statusFilter === "done" ? "all" : "done")}>Afsluttede</Button>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
+        <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-40" />
@@ -139,27 +122,21 @@ const ActionItems = () => {
               {filtered.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    <button
-                      className="text-left font-medium text-primary hover:underline"
-                      onClick={() => item.meeting_id && navigate(`/moeder/${item.meeting_id}`)}
-                    >
+                    <button className="text-left font-medium text-primary hover:underline" onClick={() => item.meeting_id && navigate(`/moeder/${item.meeting_id}`)}>
                       {item.title}
                     </button>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {item.meeting_title || "—"}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    {item.assignee_name || "—"}
-                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{item.meeting_title || "—"}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-muted-foreground">{item.assignee_name || "—"}</TableCell>
                   <TableCell className={`hidden sm:table-cell tabular-nums ${isOverdue(item) ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                     {item.due_date ? formatShortDate(item.due_date) : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
-                      variant={item.status === "done" ? "secondary" : "outline"}
-                      size="sm"
+                      variant={item.status === "done" ? "secondary" : "outline"} size="sm"
                       onClick={() => toggleStatus(item)}
+                      disabled={!canToggle(item)}
+                      title={!canToggle(item) ? "Du har ikke tilladelse til at ændre andres handlingspunkter" : ""}
                     >
                       {item.status === "done" ? "Afsluttet" : "Åben"}
                     </Button>

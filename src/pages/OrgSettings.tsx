@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -22,25 +22,14 @@ import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle, Users }
 import { toast } from "sonner";
 
 interface Org {
-  id: string;
-  name: string;
-  cvr: string | null;
-  plan: string;
-  subscription_status: string | null;
-  dpa_accepted_at: string | null;
-  dpa_version: string | null;
-  deletion_requested_at: string | null;
+  id: string; name: string; cvr: string | null; plan: string;
+  subscription_status: string | null; dpa_accepted_at: string | null;
+  dpa_version: string | null; deletion_requested_at: string | null;
 }
 
-interface UsageData {
-  meetingsThisYear: number;
-  membersCount: number;
-  storageMb: number;
-}
+interface UsageData { meetingsThisYear: number; membersCount: number; storageMb: number; }
 
-const PLAN_LIMITS = {
-  free: { meetings: 3, members: 5, storageMb: 100 },
-};
+const PLAN_LIMITS = { free: { meetings: 3, members: 5, storageMb: 100 } };
 
 const planBadge = (plan: string) => {
   switch (plan) {
@@ -59,28 +48,25 @@ const OrgSettings = () => {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  // Editable fields
   const [name, setName] = useState("");
   const [cvr, setCvr] = useState("");
-
-  // Board structure
   const [maxBestyrelse, setMaxBestyrelse] = useState(5);
   const [maxSuppleanter, setMaxSuppleanter] = useState(2);
   const [savingBoard, setSavingBoard] = useState(false);
   const [boardCounts, setBoardCounts] = useState({ bestyrelsesmedlem: 0, suppleant: 0 });
-
-  // Usage
   const [usage, setUsage] = useState<UsageData>({ meetingsThisYear: 0, membersCount: 0, storageMb: 0 });
-
-  // Delete flow
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // Block page if no permission
+  if (perms.loaded && !perms.kanSeIndstillinger) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const fetchData = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
-
     const [orgRes, meetingsRes, membersRes, docsRes] = await Promise.all([
       supabase.from("organizations").select("*").eq("id", orgId).single(),
       supabase.from("meetings").select("id").eq("org_id", orgId).gte("created_at", `${new Date().getFullYear()}-01-01`),
@@ -90,31 +76,16 @@ const OrgSettings = () => {
 
     if (orgRes.data) {
       const o = orgRes.data;
-      setOrg(o);
-      setName(o.name);
-      setCvr(o.cvr || "");
+      setOrg(o); setName(o.name); setCvr(o.cvr || "");
       setMaxBestyrelse((o as any).max_bestyrelsesmedlemmer ?? 5);
       setMaxSuppleanter((o as any).max_suppleanter ?? 2);
     }
-
     if (membersRes.data) {
-      const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => {
-        acc[m.role] = (acc[m.role] || 0) + 1;
-        return acc;
-      }, {});
-      setBoardCounts({
-        bestyrelsesmedlem: counts["bestyrelsesmedlem"] || 0,
-        suppleant: counts["suppleant"] || 0,
-      });
+      const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; }, {});
+      setBoardCounts({ bestyrelsesmedlem: counts["bestyrelsesmedlem"] || 0, suppleant: counts["suppleant"] || 0 });
     }
-
     const totalBytes = docsRes.data?.reduce((sum, d) => sum + (d.file_size_bytes || 0), 0) || 0;
-    setUsage({
-      meetingsThisYear: meetingsRes.data?.length || 0,
-      membersCount: membersRes.data?.length || 0,
-      storageMb: Math.round((totalBytes / (1024 * 1024)) * 10) / 10,
-    });
-
+    setUsage({ meetingsThisYear: meetingsRes.data?.length || 0, membersCount: membersRes.data?.length || 0, storageMb: Math.round((totalBytes / (1024 * 1024)) * 10) / 10 });
     setLoading(false);
   }, [orgId]);
 
@@ -122,42 +93,27 @@ const OrgSettings = () => {
 
   const handleSave = async () => {
     if (!orgId) return;
+    if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse til at redigere foreningsoplysninger."); return; }
     setSaving(true);
     const updates: Record<string, string | null> = { name: name.trim() };
-    if (cvr.trim()) updates.cvr = cvr.trim();
-    else updates.cvr = null;
-
+    updates.cvr = cvr.trim() || null;
     const { error } = await supabase.from("organizations").update(updates).eq("id", orgId);
-    if (error) {
-      toast.error("Kunne ikke gemme ændringer.");
-    } else {
-      toast.success("Indstillinger gemt.");
-    }
+    if (error) toast.error("Kunne ikke gemme ændringer."); else toast.success("Indstillinger gemt.");
     setSaving(false);
   };
 
   const handleSaveBoard = async () => {
     if (!orgId) return;
+    if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse."); return; }
     setSavingBoard(true);
-    const { error } = await supabase
-      .from("organizations")
-      .update({
-        max_bestyrelsesmedlemmer: maxBestyrelse,
-        max_suppleanter: maxSuppleanter,
-      } as any)
-      .eq("id", orgId);
-    if (error) {
-      toast.error("Kunne ikke gemme bestyrelsesstruktur.");
-    } else {
-      toast.success("Bestyrelsesstruktur gemt.");
-    }
+    const { error } = await supabase.from("organizations").update({ max_bestyrelsesmedlemmer: maxBestyrelse, max_suppleanter: maxSuppleanter } as any).eq("id", orgId);
+    if (error) toast.error("Kunne ikke gemme bestyrelsesstruktur."); else toast.success("Bestyrelsesstruktur gemt.");
     setSavingBoard(false);
   };
 
   const handleExport = async () => {
     if (!orgId) return;
     setExporting(true);
-
     const [orgRes, meetingsRes, minutesRes, membersRes, docsRes, actionItemsRes] = await Promise.all([
       supabase.from("organizations").select("*").eq("id", orgId).single(),
       supabase.from("meetings").select("*").eq("org_id", orgId),
@@ -166,61 +122,35 @@ const OrgSettings = () => {
       supabase.from("documents").select("id, name, category, created_at, file_size_bytes").eq("org_id", orgId),
       supabase.from("action_items").select("*").eq("org_id", orgId),
     ]);
-
     const exportData = {
-      exported_at: new Date().toISOString(),
-      organization: orgRes.data,
-      meetings: meetingsRes.data || [],
-      minutes: minutesRes.data || [],
-      members: membersRes.data || [],
-      documents: docsRes.data || [],
-      action_items: actionItemsRes.data || [],
+      exported_at: new Date().toISOString(), organization: orgRes.data,
+      meetings: meetingsRes.data || [], minutes: minutesRes.data || [],
+      members: membersRes.data || [], documents: docsRes.data || [], action_items: actionItemsRes.data || [],
     };
-
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const dateStr = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `vedtaegt-eksport-${dateStr}.json`;
-    a.click();
+    a.href = url; a.download = `vedtaegt-eksport-${new Date().toISOString().slice(0, 10)}.json`; a.click();
     URL.revokeObjectURL(url);
-
     await logAuditEvent("org.data_exported", "organization", orgId);
-    toast.success("Data eksporteret.");
-    setExporting(false);
+    toast.success("Data eksporteret."); setExporting(false);
   };
 
   const handleRequestDeletion = async () => {
     if (!orgId || confirmName !== org?.name) return;
     setDeleting(true);
-
     const now = new Date();
     const deletionDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
     await supabase.from("organizations").update({ deletion_requested_at: now.toISOString() }).eq("id", orgId);
     await logAuditEvent("org.deletion_requested", "organization", orgId);
-
-    // Send deletion confirmation email to current user
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
       await supabase.functions.invoke("send-email", {
-        body: {
-          to: user.email,
-          templateName: "deletion_confirmation",
-          templateData: {
-            orgName: org?.name,
-            deletionDate: formatShortDate(deletionDate),
-          },
-        },
+        body: { to: user.email, templateName: "deletion_confirmation", templateData: { orgName: org?.name, deletionDate: formatShortDate(deletionDate) } },
       });
     }
-
     toast.success("Sletningsanmodning registreret.");
-    setDeleteStep(0);
-    setConfirmName("");
-    setDeleting(false);
-    navigate("/dashboard");
+    setDeleteStep(0); setConfirmName(""); setDeleting(false); navigate("/dashboard");
   };
 
   const usageBar = (current: number, max: number, label: string, unit = "") => {
@@ -230,9 +160,7 @@ const OrgSettings = () => {
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">{label}</span>
-          <span className={`tabular-nums ${isHigh ? "text-destructive font-medium" : "text-foreground"}`}>
-            {current}{unit} / {max}{unit}
-          </span>
+          <span className={`tabular-nums ${isHigh ? "text-destructive font-medium" : "text-foreground"}`}>{current}{unit} / {max}{unit}</span>
         </div>
         <Progress value={pct} className={`h-2 ${isHigh ? "[&>div]:bg-destructive" : ""}`} />
       </div>
@@ -249,67 +177,46 @@ const OrgSettings = () => {
     );
   }
 
-  const deletionDate = org?.deletion_requested_at
-    ? new Date(new Date(org.deletion_requested_at).getTime() + 30 * 24 * 60 * 60 * 1000)
-    : null;
+  const deletionDate = org?.deletion_requested_at ? new Date(new Date(org.deletion_requested_at).getTime() + 30 * 24 * 60 * 60 * 1000) : null;
 
   return (
     <div className="space-y-8 max-w-3xl">
       <SettingsTabs />
       <h1 className="text-2xl font-semibold text-foreground">Foreningsindstillinger</h1>
 
-      {/* Deletion banner */}
       {org?.deletion_requested_at && deletionDate && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
           <div>
             <p className="font-medium text-destructive">Sletning anmodet</p>
-            <p className="text-sm text-muted-foreground">
-              Din forening slettes den {formatShortDate(deletionDate)}.
-            </p>
+            <p className="text-sm text-muted-foreground">Din forening slettes den {formatShortDate(deletionDate)}.</p>
           </div>
         </div>
       )}
 
-      {/* Section 1: Stamoplysninger */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Stamoplysninger
-          </CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5" /> Stamoplysninger</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="org-name">Foreningens navn</Label>
-            <Input id="org-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input id="org-name" value={name} onChange={(e) => setName(e.target.value)} disabled={!perms.kanRedigereForening} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="org-cvr">CVR-nummer (valgfrit)</Label>
-            <Input
-              id="org-cvr"
-              value={cvr}
-              onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))}
-              placeholder="12345678"
-              maxLength={8}
-            />
+            <Input id="org-cvr" value={cvr} onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="12345678" maxLength={8} disabled={!perms.kanRedigereForening} />
           </div>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving ? "Gemmer..." : "Gem ændringer"}
-          </Button>
+          {perms.kanRedigereForening && (
+            <Button onClick={handleSave} disabled={saving || !name.trim()}>{saving ? "Gemmer..." : "Gem ændringer"}</Button>
+          )}
         </CardContent>
       </Card>
 
-      {/* Section 2: Abonnement */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Abonnement
-          </CardTitle>
-          <CardDescription className="flex items-center gap-2">
-            Nuværende plan: {planBadge(org?.plan || "free")}
-          </CardDescription>
+          <CardTitle className="text-lg flex items-center gap-2"><CreditCard className="h-5 w-5" /> Abonnement</CardTitle>
+          <CardDescription className="flex items-center gap-2">Nuværende plan: {planBadge(org?.plan || "free")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {org?.plan === "free" && (
@@ -320,92 +227,57 @@ const OrgSettings = () => {
                 {usageBar(usage.storageMb, PLAN_LIMITS.free.storageMb, "Storage", " MB")}
               </div>
               <Separator />
-              <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret. Kontakt support for at opgradere.")}>Opgrader til Forening — 99 kr/md</Button>
+              <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>Opgrader til Forening — 99 kr/md</Button>
             </>
           )}
           {org?.plan !== "free" && (
-            <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret. Kontakt support for at administrere dit abonnement.")}>Administrér abonnement</Button>
+            <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>Administrér abonnement</Button>
           )}
         </CardContent>
       </Card>
 
-      {/* Section 2b: Bestyrelsesstruktur */}
-      {perms.kanOpdatereForening && (
+      {perms.kanRedigereForening && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Bestyrelsesstruktur
-            </CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5" /> Bestyrelsesstruktur</CardTitle>
             <CardDescription>Konfigurér antal pladser i bestyrelsen.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="max-bestyrelse" className="text-xs">Maks. antal bestyrelsesmedlemmer</Label>
-                <Input
-                  id="max-bestyrelse"
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={maxBestyrelse}
-                  onChange={(e) => setMaxBestyrelse(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-                />
+                <Input id="max-bestyrelse" type="number" min={1} max={20} value={maxBestyrelse} onChange={(e) => setMaxBestyrelse(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="max-suppleanter" className="text-xs">Maks. antal suppleanter</Label>
-                <Input
-                  id="max-suppleanter"
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={maxSuppleanter}
-                  onChange={(e) => setMaxSuppleanter(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))}
-                />
+                <Input id="max-suppleanter" type="number" min={0} max={10} value={maxSuppleanter} onChange={(e) => setMaxSuppleanter(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Aktuel bestyrelse: {boardCounts.bestyrelsesmedlem} / {maxBestyrelse} bestyrelsesmedlemmer, {boardCounts.suppleant} / {maxSuppleanter} suppleanter
-            </p>
-            <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">
-              {savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}
-            </Button>
+            <p className="text-xs text-muted-foreground">Aktuel bestyrelse: {boardCounts.bestyrelsesmedlem} / {maxBestyrelse} bestyrelsesmedlemmer, {boardCounts.suppleant} / {maxSuppleanter} suppleanter</p>
+            <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">{savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}</Button>
           </CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Dine data
-          </CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> Dine data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {org?.dpa_accepted_at && (
-            <p className="text-sm text-muted-foreground">
-              Databehandleraftale accepteret: {formatShortDate(org.dpa_accepted_at)}
-              {org.dpa_version && ` (version ${org.dpa_version})`}
-            </p>
+            <p className="text-sm text-muted-foreground">Databehandleraftale accepteret: {formatShortDate(org.dpa_accepted_at)}{org.dpa_version && ` (version ${org.dpa_version})`}</p>
           )}
           <Button variant="outline" onClick={handleExport} disabled={exporting}>
-            <Download className="h-4 w-4 mr-1" />
-            {exporting ? "Eksporterer..." : "Hent alle data (GDPR-eksport)"}
+            <Download className="h-4 w-4 mr-1" /> {exporting ? "Eksporterer..." : "Hent alle data (GDPR-eksport)"}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Section 4: Slet forening */}
-      {perms.kanOverdrageEjerskab && (
+      {perms.erFormand && (
         <Card className="border-destructive/30">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
-              Slet forening
-            </CardTitle>
-            <CardDescription>
-              Alle data slettes permanent. Denne handling kan ikke fortrydes.
-            </CardDescription>
+            <CardTitle className="text-lg flex items-center gap-2 text-destructive"><Trash2 className="h-5 w-5" /> Slet forening</CardTitle>
+            <CardDescription>Alle data slettes permanent. Denne handling kan ikke fortrydes.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="destructive" onClick={() => setDeleteStep(1)} disabled={!!org?.deletion_requested_at}>
@@ -415,7 +287,6 @@ const OrgSettings = () => {
         </Card>
       )}
 
-      {/* Delete confirmation dialog */}
       <AlertDialog open={deleteStep > 0} onOpenChange={(open) => { if (!open) { setDeleteStep(0); setConfirmName(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -428,20 +299,14 @@ const OrgSettings = () => {
                 {deleteStep === 1 && (
                   <>
                     <p>Din forening og alle tilknyttede data slettes permanent om 30 dage.</p>
-                    <p className="font-medium text-foreground">
-                      Bemærk: Regnskabsdokumenter opbevares i 5 år jf. Bogføringsloven, selv efter sletning af foreningen.
-                    </p>
+                    <p className="font-medium text-foreground">Bemærk: Regnskabsdokumenter opbevares i 5 år jf. Bogføringsloven, selv efter sletning af foreningen.</p>
                     <p>Du vil modtage en bekræftelses-e-mail.</p>
                   </>
                 )}
                 {deleteStep === 2 && (
                   <div className="space-y-3">
                     <p>Skriv foreningens navn for at bekræfte: <strong>{org?.name}</strong></p>
-                    <Input
-                      value={confirmName}
-                      onChange={(e) => setConfirmName(e.target.value)}
-                      placeholder={org?.name}
-                    />
+                    <Input value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={org?.name} />
                   </div>
                 )}
               </div>
@@ -450,16 +315,10 @@ const OrgSettings = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuller</AlertDialogCancel>
             {deleteStep === 1 && (
-              <AlertDialogAction onClick={(e) => { e.preventDefault(); setDeleteStep(2); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Fortsæt
-              </AlertDialogAction>
+              <AlertDialogAction onClick={(e) => { e.preventDefault(); setDeleteStep(2); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Fortsæt</AlertDialogAction>
             )}
             {deleteStep === 2 && (
-              <AlertDialogAction
-                onClick={(e) => { e.preventDefault(); handleRequestDeletion(); }}
-                disabled={confirmName !== org?.name || deleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
+              <AlertDialogAction onClick={(e) => { e.preventDefault(); handleRequestDeletion(); }} disabled={confirmName !== org?.name || deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 {deleting ? "Sletter..." : "Bekræft sletning"}
               </AlertDialogAction>
             )}
