@@ -54,8 +54,8 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    if (!callerMember || callerMember.role !== "owner") {
-      return new Response(JSON.stringify({ error: "Kun ejeren kan overdrage ejerskab." }), {
+    if (!callerMember || callerMember.role !== "formand") {
+      return new Response(JSON.stringify({ error: "Kun formanden kan overdrage formandsposten." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
