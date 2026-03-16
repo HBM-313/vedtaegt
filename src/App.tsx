@@ -12,6 +12,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import MeetingsList from "./pages/MeetingsList";
 import CreateMeeting from "./pages/CreateMeeting";
+import MeetingDetail from "./pages/MeetingDetail";
+import ApprovalPage from "./pages/ApprovalPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +38,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/opret-konto" element={<Signup />} />
           <Route path="/nulstil-adgangskode" element={<ResetPassword />} />
-          <Route path="/godkend/:token" element={<div>Godkend</div>} />
+          <Route path="/godkend/:token" element={<ApprovalPage />} />
           <Route path="/dpa" element={<div>Databehandleraftale</div>} />
           <Route path="/privatlivspolitik" element={<div>Privatlivspolitik</div>} />
 
@@ -44,6 +46,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
           <Route path="/moeder" element={<ProtectedLayout><MeetingsList /></ProtectedLayout>} />
           <Route path="/moeder/nyt" element={<ProtectedLayout><CreateMeeting /></ProtectedLayout>} />
+          <Route path="/moeder/:id" element={<ProtectedLayout><MeetingDetail /></ProtectedLayout>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
