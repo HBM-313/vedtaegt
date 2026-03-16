@@ -96,10 +96,10 @@ const OwnershipTransfer = () => {
       return;
     }
 
-    // Demote old owner to admin
-    await supabase.from("members").update({ role: "admin" }).eq("id", fromMember.id);
-    // Promote new owner
-    await supabase.from("members").update({ role: "owner" }).eq("id", toMember.id);
+    // Demote old formand to bestyrelsesmedlem
+    await supabase.from("members").update({ role: "bestyrelsesmedlem" }).eq("id", fromMember.id);
+    // Promote new formand
+    await supabase.from("members").update({ role: "formand" }).eq("id", toMember.id);
     // Mark transfer as accepted
     await supabase.from("ownership_transfers").update({ accepted_at: new Date().toISOString() }).eq("id", transfer.id);
 
