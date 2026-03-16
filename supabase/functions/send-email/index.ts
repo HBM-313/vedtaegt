@@ -59,7 +59,8 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
       };
     }
 
-    case "approval_request":
+    case "approval_request": {
+      const runde = (data.runde as number) || 1;
       return {
         subject: `Referat fra ${data.meetingTitle} afventer din godkendelse`,
         html: `
@@ -68,22 +69,83 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 <body style="font-family:Arial,sans-serif;background:#f9fafb;padding:40px 0;">
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
   <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Referat afventer godkendelse</h1>
-  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
-    Referatet fra <strong>${data.meetingTitle}</strong> den ${data.meetingDate} er klar til din godkendelse.
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 8px;">
+    Hej ${data.recipientName || ""},
   </p>
-  <a href="${BASE_URL}/godkend/${data.token}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
-    Godkend referat
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 8px;">
+    ${data.senderName || "Formanden"} har sendt referatet fra <strong>${data.meetingTitle}</strong> til din godkendelse.
+  </p>
+  <table style="width:100%;margin:16px 0 24px;font-size:13px;color:#64748b;">
+    <tr><td style="padding:4px 0;">Mødedato:</td><td style="padding:4px 0;"><strong>${data.meetingDate}</strong></td></tr>
+    <tr><td style="padding:4px 0;">Forening:</td><td style="padding:4px 0;"><strong>${data.orgName || ""}</strong></td></tr>
+    ${runde > 1 ? `<tr><td style="padding:4px 0;">Godkendelsesrunde:</td><td style="padding:4px 0;"><strong>${runde}</strong></td></tr>` : ""}
+  </table>
+  <a href="${BASE_URL}/godkend/${data.token}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+    Læs og godkend referat
   </a>
-  <p style="font-size:12px;color:#94a3b8;margin-top:24px;line-height:1.5;">
-    Linket er personligt og må ikke deles. Det udløber om 30 dage.
+  <p style="font-size:13px;color:#64748b;margin-top:24px;line-height:1.5;">
+    Du kan både godkende og afvise referatet via linket. Linket udløber om 30 dage.
   </p>
+  ${data.senderEmail ? `<p style="font-size:12px;color:#94a3b8;margin-top:12px;">Har du spørgsmål? Kontakt ${data.senderName} på ${data.senderEmail}.</p>` : ""}
+</div>
+</body></html>`,
+      };
+    }
+
+    case "approval_reminder":
+      return {
+        subject: `Påmindelse: Referat fra ${data.meetingTitle} afventer stadig din godkendelse`,
+        html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
+  <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">Påmindelse om godkendelse</h1>
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 8px;">
+    Hej ${data.recipientName || ""},
+  </p>
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
+    Vi vil blot minde dig om at referatet fra <strong>${data.meetingTitle}</strong> stadig afventer din godkendelse.
+    ${data.approvedCount !== undefined ? `<br/>${data.approvedCount} af ${data.totalCount} bestyrelsesmedlemmer har godkendt.` : ""}
+  </p>
+  <a href="${BASE_URL}/godkend/${data.token}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+    Godkend referat nu
+  </a>
+</div>
+</body></html>`,
+      };
+
+    case "referat_rejected":
+      return {
+        subject: `⚠ Referatet fra ${data.meetingTitle} blev afvist`,
+        html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
+  <h1 style="font-size:20px;color:#0f172a;margin:0 0 16px;">⚠ Referat afvist</h1>
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 8px;">
+    Hej ${data.recipientName || ""},
+  </p>
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 16px;">
+    ${data.rejectorName} (${data.rejectorRole}) har afvist referatet fra <strong>${data.meetingTitle}</strong>.
+  </p>
+  <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:16px;margin:0 0 24px;">
+    <p style="font-size:13px;color:#991b1b;margin:0;font-style:italic;">"${data.comment}"</p>
+  </div>
+  <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 24px;">
+    Log ind og ret referatet, og send det til godkendelse igen.
+  </p>
+  <a href="${BASE_URL}/moeder/${data.meetingId}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+    Gå til mødet
+  </a>
 </div>
 </body></html>`,
       };
 
     case "all_approved":
       return {
-        subject: `Alle har godkendt referatet fra ${data.meetingTitle}`,
+        subject: `✓ Referatet fra ${data.meetingTitle} er endeligt godkendt`,
         html: `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -97,15 +159,17 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
   <table style="width:100%;border-collapse:collapse;margin:0 0 24px;">
     <tr style="border-bottom:1px solid #e5e7eb;">
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Navn</th>
+      <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Rolle</th>
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Tidspunkt</th>
     </tr>
-    ${(data.approvals as Array<{name: string; date: string}>).map((a) => `
+    ${(data.approvals as Array<{name: string; role: string; date: string}>).map((a) => `
     <tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:8px 0;font-size:13px;color:#0f172a;">${a.name}</td>
+      <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.role}</td>
       <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.date}</td>
     </tr>`).join("")}
   </table>` : ""}
-  <a href="${BASE_URL}/moeder/${data.meetingId}" style="display:inline-block;background:#1e40af;color:#fff;padding:12px 28px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
+  <a href="${BASE_URL}/moeder/${data.meetingId}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
     Download PDF
   </a>
 </div>
