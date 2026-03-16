@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { useOrg } from "@/components/AppLayout";
 import { logAuditEvent } from "@/lib/audit";
+import { getRoleLabel } from "@/lib/roles";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
