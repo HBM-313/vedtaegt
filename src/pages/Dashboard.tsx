@@ -1,106 +1,199 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Shield, LogOut, FileText, Users, ClipboardCheck, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { formatDate } from "@/lib/format";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/StatusBadge";
+import { useOrg } from "@/components/AppLayout";
+import { formatShortDate } from "@/lib/format";
+import { Plus, FileText, ClipboardCheck, FolderOpen } from "lucide-react";
+
+interface Meeting {
+  id: string;
+  title: string;
+  meeting_date: string | null;
+  status: string | null;
+}
+
+interface ActionItem {
+  id: string;
+  title: string;
+  due_date: string | null;
+  meetings: { title: string } | null;
+}
+
+interface Document {
+  id: string;
+  name: string;
+  category: string | null;
+  created_at: string | null;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { orgId } = useOrg();
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [actions, setActions] = useState<ActionItem[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setUserEmail(user.email ?? null);
+    if (!orgId) return;
+
+    const load = async () => {
+      setLoading(true);
+
+      const [meetingsRes, actionsRes, docsRes] = await Promise.all([
+        supabase
+          .from("meetings")
+          .select("id, title, meeting_date, status")
+          .eq("org_id", orgId)
+          .gte("meeting_date", new Date().toISOString())
+          .order("meeting_date", { ascending: true })
+          .limit(3),
+        supabase
+          .from("action_items")
+          .select("id, title, due_date, meetings(title)")
+          .eq("org_id", orgId)
+          .eq("status", "open")
+          .order("due_date", { ascending: true })
+          .limit(5),
+        supabase
+          .from("documents")
+          .select("id, name, category, created_at")
+          .eq("org_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(3),
+      ]);
+
+      setMeetings((meetingsRes.data as Meeting[]) || []);
+      setActions((actionsRes.data as ActionItem[]) || []);
+      setDocuments((docsRes.data as Document[]) || []);
+      setLoading(false);
     };
-    getUser();
-  }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logget ud.");
-    navigate("/");
-  };
+    load();
+  }, [orgId]);
 
-  const today = formatDate(new Date());
+  const Section = ({
+    title,
+    icon: Icon,
+    children,
+  }: {
+    title: string;
+    icon: React.ElementType;
+    children: React.ReactNode;
+  }) => (
+    <div className="ring-1 ring-border rounded-sm">
+      <div className="p-4 border-b border-border flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold">{title}</h2>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
 
-  const navItems = [
-    { icon: BarChart3, label: "Oversigt", active: true },
-    { icon: FileText, label: "Møder" },
-    { icon: Users, label: "Medlemmer" },
-    { icon: ClipboardCheck, label: "Handlingspunkter" },
-  ];
+  const SkeletonRows = ({ count = 3 }: { count?: number }) => (
+    <div className="space-y-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 flex-1" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+
+  const EmptyState = ({ text }: { text: string }) => (
+    <p className="text-sm text-muted-foreground">{text}</p>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="border-b border-border">
-        <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="text-base font-semibold tracking-display">Vedtægt</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">{userEmail}</span>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold tracking-display">Dashboard</h1>
+        <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
+          <Plus className="h-4 w-4 mr-1" />
+          Nyt møde
+        </Button>
+      </div>
 
-      {/* Nav */}
-      <nav className="border-b border-border">
-        <div className="container flex gap-0">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-medium transition-colors press-effect ${
-                item.active
-                  ? "border-b-2 border-foreground text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <item.icon className="h-3.5 w-3.5" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {/* Content */}
-      <main className="container py-12">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-2">
-          {today}
-        </p>
-        <h1 className="text-3xl font-semibold tracking-display mb-8">Oversigt</h1>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border ring-1 ring-border rounded-sm overflow-hidden">
-          {[
-            { label: "Aktive møder", value: "0" },
-            { label: "Åbne handlingspunkter", value: "0" },
-            { label: "Medlemmer", value: "0" },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-background p-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{stat.label}</p>
-              <p className="text-2xl font-semibold tabular-nums">{stat.value}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Upcoming meetings */}
+        <Section title="Kommende møder" icon={FileText}>
+          {loading ? (
+            <SkeletonRows />
+          ) : meetings.length === 0 ? (
+            <EmptyState text="Ingen kommende møder. Opret dit første møde." />
+          ) : (
+            <div className="space-y-3">
+              {meetings.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => navigate(`/moeder/${m.id}`)}
+                  className="w-full flex items-center justify-between p-2 -m-2 rounded hover:bg-muted transition-colors text-left"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{m.title}</p>
+                    {m.meeting_date && (
+                      <p className="text-xs text-muted-foreground">
+                        {formatShortDate(m.meeting_date)}
+                      </p>
+                    )}
+                  </div>
+                  <StatusBadge status={m.status || "draft"} />
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </Section>
 
-        <div className="mt-12 ring-1 ring-border rounded-sm">
-          <div className="p-6 border-b border-border">
-            <h2 className="text-sm font-semibold">Seneste aktivitet</h2>
-          </div>
-          <div className="p-6">
-            <p className="text-sm text-muted-foreground">
-              Ingen aktivitet endnu. Opret dit første møde for at komme i gang.
-            </p>
-          </div>
-        </div>
-      </main>
+        {/* Open action items */}
+        <Section title="Mine åbne handlingspunkter" icon={ClipboardCheck}>
+          {loading ? (
+            <SkeletonRows count={5} />
+          ) : actions.length === 0 ? (
+            <EmptyState text="Ingen åbne handlingspunkter. Godt klaret!" />
+          ) : (
+            <div className="space-y-3">
+              {actions.map((a) => (
+                <div key={a.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{a.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(a.meetings as any)?.title || "Intet møde"}
+                      {a.due_date && ` · Frist: ${formatShortDate(a.due_date)}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* Recent documents */}
+        <Section title="Seneste dokumenter" icon={FolderOpen}>
+          {loading ? (
+            <SkeletonRows />
+          ) : documents.length === 0 ? (
+            <EmptyState text="Ingen dokumenter endnu. Upload dit første dokument." />
+          ) : (
+            <div className="space-y-3">
+              {documents.map((d) => (
+                <div key={d.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{d.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {d.category || "Andet"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+      </div>
     </div>
   );
 };
