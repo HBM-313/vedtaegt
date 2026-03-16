@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/components/AppLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";
+import { getRoleLabel, INVITABLE_ROLES, ROLE_SORT_ORDER, type DanishRole } from "@/lib/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,41 +39,68 @@ interface Member {
   invited_at: string | null;
 }
 
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  formand: "bg-blue-900 text-blue-50 border-blue-800",
+  naestformand: "bg-blue-100 text-blue-800 border-blue-200",
+  kasserer: "bg-green-100 text-green-800 border-green-200",
+  bestyrelsesmedlem: "bg-muted text-muted-foreground border-border",
+  suppleant: "bg-muted/50 text-muted-foreground/70 border-border italic",
+};
+
 const roleBadge = (role: string) => {
-  switch (role) {
-    case "owner": return <Badge className="bg-purple-100 text-purple-800 border-purple-200" variant="outline">Ejer</Badge>;
-    case "admin": return <Badge className="bg-blue-100 text-blue-800 border-blue-200" variant="outline">Admin</Badge>;
-    default: return <Badge variant="outline" className="bg-muted text-muted-foreground">Medlem</Badge>;
-  }
+  const style = ROLE_BADGE_STYLES[role] || ROLE_BADGE_STYLES.bestyrelsesmedlem;
+  return (
+    <Badge variant="outline" className={style}>
+      {getRoleLabel(role)}
+    </Badge>
+  );
 };
 
 const TeamSettings = () => {
-  const { orgId, memberId, memberRole, userId } = useOrg();
+  const { orgId, memberId } = useOrg();
+  const perms = usePermissions();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [removeMember, setRemoveMember] = useState<Member | null>(null);
+  const [orgLimits, setOrgLimits] = useState({ max_bestyrelsesmedlemmer: 5, max_suppleanter: 2 });
 
   // Invite state
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("member");
+  const [inviteRole, setInviteRole] = useState<string>("bestyrelsesmedlem");
   const [inviting, setInviting] = useState(false);
 
   // Transfer state
   const [transferEmail, setTransferEmail] = useState("");
   const [transferring, setTransferring] = useState(false);
 
-  const isOwner = memberRole === "owner";
-  const isOwnerOrAdmin = memberRole === "owner" || memberRole === "admin";
-
   const fetchMembers = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("members")
-      .select("id, name, email, role, user_id, joined_at, invited_at")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: true });
-    if (data) setMembers(data);
+    const [membersRes, orgRes] = await Promise.all([
+      supabase
+        .from("members")
+        .select("id, name, email, role, user_id, joined_at, invited_at")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("organizations")
+        .select("max_bestyrelsesmedlemmer, max_suppleanter")
+        .eq("id", orgId)
+        .maybeSingle(),
+    ]);
+    if (membersRes.data) {
+      // Sort by role order
+      const sorted = [...membersRes.data].sort(
+        (a, b) => (ROLE_SORT_ORDER[a.role as DanishRole] ?? 99) - (ROLE_SORT_ORDER[b.role as DanishRole] ?? 99)
+      );
+      setMembers(sorted);
+    }
+    if (orgRes.data) {
+      setOrgLimits({
+        max_bestyrelsesmedlemmer: (orgRes.data as any).max_bestyrelsesmedlemmer ?? 5,
+        max_suppleanter: (orgRes.data as any).max_suppleanter ?? 2,
+      });
+    }
     setLoading(false);
   }, [orgId]);
 
@@ -80,6 +109,12 @@ const TeamSettings = () => {
   const activeMembers = members.filter((m) => m.user_id !== null || m.joined_at !== null);
   const pendingMembers = members.filter((m) => m.user_id === null && m.joined_at === null && m.invited_at !== null);
 
+  // Count roles
+  const roleCounts = members.reduce<Record<string, number>>((acc, m) => {
+    acc[m.role] = (acc[m.role] || 0) + 1;
+    return acc;
+  }, {});
+
   const handleRoleChange = async (member: Member, newRole: string) => {
     await supabase.from("members").update({ role: newRole }).eq("id", member.id);
     await logAuditEvent("member.role_changed", "member", member.id, {
@@ -87,7 +122,7 @@ const TeamSettings = () => {
       to: newRole,
       email: member.email,
     });
-    toast.success(`Rolle ændret til ${newRole === "admin" ? "Admin" : "Medlem"}`);
+    toast.success(`Rolle ændret til ${getRoleLabel(newRole)}`);
     fetchMembers();
   };
 
@@ -103,10 +138,32 @@ const TeamSettings = () => {
     fetchMembers();
   };
 
+  const validateInviteRole = (role: string): string | null => {
+    if (role === "naestformand" && (roleCounts["naestformand"] || 0) >= 1) {
+      return "Foreningen har allerede en næstformand.";
+    }
+    if (role === "kasserer" && (roleCounts["kasserer"] || 0) >= 1) {
+      return "Foreningen har allerede en kasserer.";
+    }
+    if (role === "bestyrelsesmedlem" && (roleCounts["bestyrelsesmedlem"] || 0) >= orgLimits.max_bestyrelsesmedlemmer) {
+      return `Maks. antal bestyrelsesmedlemmer er nået (${orgLimits.max_bestyrelsesmedlemmer}). Øg grænsen under Indstillinger → Bestyrelsesstruktur.`;
+    }
+    if (role === "suppleant" && (roleCounts["suppleant"] || 0) >= orgLimits.max_suppleanter) {
+      return `Maks. antal suppleanter er nået (${orgLimits.max_suppleanter}).`;
+    }
+    return null;
+  };
+
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !orgId) return;
-    setInviting(true);
 
+    const validationError = validateInviteRole(inviteRole);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setInviting(true);
     const { data, error } = await supabase.functions.invoke("invite-member", {
       body: { email: inviteEmail.trim(), role: inviteRole, org_id: orgId },
     });
@@ -116,7 +173,7 @@ const TeamSettings = () => {
     } else {
       toast.success(`Invitation sendt til ${inviteEmail.trim()}`);
       setInviteEmail("");
-      setInviteRole("member");
+      setInviteRole("bestyrelsesmedlem");
       fetchMembers();
     }
     setInviting(false);
@@ -132,11 +189,9 @@ const TeamSettings = () => {
   const handleTransfer = async () => {
     if (!transferEmail.trim() || !orgId) return;
     setTransferring(true);
-
     const { data, error } = await supabase.functions.invoke("transfer-ownership", {
       body: { to_email: transferEmail.trim(), org_id: orgId },
     });
-
     if (error || data?.error) {
       toast.error(data?.error || "Kunne ikke sende overdragelsesanmodning.");
     } else {
@@ -146,10 +201,24 @@ const TeamSettings = () => {
     setTransferring(false);
   };
 
+  // Summary text
+  const summary = [
+    `1 formand`,
+    roleCounts["naestformand"] ? `1 næstformand` : null,
+    roleCounts["kasserer"] ? `1 kasserer` : null,
+    `${roleCounts["bestyrelsesmedlem"] || 0}/${orgLimits.max_bestyrelsesmedlemmer} bestyrelsesmedlemmer`,
+    `${roleCounts["suppleant"] || 0}/${orgLimits.max_suppleanter} suppleanter`,
+  ].filter(Boolean).join(", ");
+
   return (
     <div className="space-y-8 max-w-4xl">
       <SettingsTabs />
       <h1 className="text-2xl font-semibold text-foreground">Team</h1>
+
+      {/* Summary */}
+      <p className="text-sm text-muted-foreground">
+        Bestyrelsen består af: {summary}
+      </p>
 
       {/* Active members */}
       <Card>
@@ -170,7 +239,7 @@ const TeamSettings = () => {
                   <TableHead className="hidden sm:table-cell">E-mail</TableHead>
                   <TableHead>Rolle</TableHead>
                   <TableHead className="hidden md:table-cell">Tilsluttet</TableHead>
-                  {isOwnerOrAdmin && <TableHead className="text-right">Handlinger</TableHead>}
+                  {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && <TableHead className="text-right">Handlinger</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,30 +251,29 @@ const TeamSettings = () => {
                     <TableCell className="hidden md:table-cell text-muted-foreground">
                       {m.joined_at ? formatShortDate(m.joined_at) : "—"}
                     </TableCell>
-                    {isOwnerOrAdmin && (
+                    {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && (
                       <TableCell className="text-right">
-                        {m.id !== memberId && m.role !== "owner" && (
+                        {m.id !== memberId && m.role !== "formand" && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {isOwner && m.role !== "admin" && (
-                                <DropdownMenuItem onClick={() => handleRoleChange(m, "admin")}>
-                                  Gør til Admin
+                              {perms.kanAendreRoller && INVITABLE_ROLES.map((r) => (
+                                r !== m.role && (
+                                  <DropdownMenuItem key={r} onClick={() => handleRoleChange(m, r)}>
+                                    Gør til {getRoleLabel(r)}
+                                  </DropdownMenuItem>
+                                )
+                              ))}
+                              {perms.kanFjerneMedlemmer && (
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => setRemoveMember(m)}
+                                >
+                                  Fjern fra forening
                                 </DropdownMenuItem>
                               )}
-                              {isOwner && m.role === "admin" && (
-                                <DropdownMenuItem onClick={() => handleRoleChange(m, "member")}>
-                                  Gør til Medlem
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => setRemoveMember(m)}
-                              >
-                                Fjern fra forening
-                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         )}
@@ -265,7 +333,7 @@ const TeamSettings = () => {
       )}
 
       {/* Invite new member */}
-      {isOwnerOrAdmin && (
+      {perms.kanInvitereMedlemmer && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -287,12 +355,15 @@ const TeamSettings = () => {
                 />
               </div>
               <Select value={inviteRole} onValueChange={setInviteRole}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="member">Medlem</SelectItem>
+                  {INVITABLE_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {getRoleLabel(r)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button onClick={handleInvite} disabled={!inviteEmail.trim() || inviting}>
@@ -304,19 +375,19 @@ const TeamSettings = () => {
         </Card>
       )}
 
-      {/* Ownership transfer - owner only */}
-      {isOwner && (
+      {/* Ownership transfer - formand only */}
+      {perms.kanOverdrageEjerskab && (
         <>
           <Separator />
           <Card className="border-destructive/30">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                Overdrag ejerskab
+                Overdrag formandsposten
               </CardTitle>
               <CardDescription>
-                Overdrag ejerskabet af denne forening til et andet bestyrelsesmedlem.
-                Du vil automatisk blive degraderet til Admin.
+                Overdrag formandsrollen til et andet bestyrelsesmedlem.
+                Du vil automatisk blive bestyrelsesmedlem.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -324,7 +395,7 @@ const TeamSettings = () => {
                 <div className="flex-1">
                   <Input
                     type="email"
-                    placeholder="E-mailadresse på ny ejer"
+                    placeholder="E-mailadresse på ny formand"
                     value={transferEmail}
                     onChange={(e) => setTransferEmail(e.target.value)}
                   />

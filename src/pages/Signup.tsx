@@ -120,7 +120,7 @@ const Signup = () => {
         .insert({
           org_id: org.id,
           user_id: authData.user.id,
-          role: "owner",
+          role: "formand",
           name: name.trim(),
           email,
           joined_at: now,

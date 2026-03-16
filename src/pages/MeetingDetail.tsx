@@ -137,7 +137,7 @@ const MeetingDetail = () => {
 
         {/* Status flow buttons */}
         <div className="flex items-center gap-2 shrink-0">
-          {isOwnerOrAdmin && meeting.status === "draft" && (
+          {perms.kanRedigereMoeder && meeting.status === "draft" && (
             <Button
               size="sm"
               className="press-effect"
@@ -148,7 +148,7 @@ const MeetingDetail = () => {
               Start møde
             </Button>
           )}
-          {isOwnerOrAdmin && meeting.status === "active" && (
+          {perms.kanSendeTilGodkendelse && meeting.status === "active" && (
             <Button
               size="sm"
               className="press-effect"
