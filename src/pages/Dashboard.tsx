@@ -130,6 +130,18 @@ const Dashboard = () => {
         </Button>
       </div>
 
+      {deletionDate && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3 mb-6">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-destructive">Sletning anmodet</p>
+            <p className="text-sm text-muted-foreground">
+              Din forening slettes den {formatShortDate(deletionDate)}.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Upcoming meetings */}
         <Section title="Kommende møder" icon={FileText}>
