@@ -87,7 +87,7 @@ const Dashboard = () => {
     };
 
     load();
-  }, [orgId]);
+  }, [orgId, memberId]);
 
   const Section = ({
     title,
