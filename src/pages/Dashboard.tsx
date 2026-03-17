@@ -128,10 +128,12 @@ const Dashboard = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-display">Dashboard</h1>
-        <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
-          <Plus className="h-4 w-4 mr-1" />
-          Nyt møde
-        </Button>
+        {perms.kanOpretteMoeder && (
+          <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nyt møde
+          </Button>
+        )}
       </div>
 
       {deletionDate && (
