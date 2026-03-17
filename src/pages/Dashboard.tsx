@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/components/AppLayout";
 import { formatShortDate } from "@/lib/format";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Plus, FileText, ClipboardCheck, FolderOpen, AlertTriangle } from "lucide-react";
 
 interface Meeting {
