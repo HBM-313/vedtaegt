@@ -202,7 +202,8 @@ const Dashboard = () => {
         </Section>
 
         {/* Recent documents */}
-        <Section title="Seneste dokumenter" icon={FolderOpen}>
+        {perms.kanSeDokumenter && <Section title="Seneste dokumenter" icon={FolderOpen}>
+
           {loading ? (
             <SkeletonRows />
           ) : documents.length === 0 ? (
