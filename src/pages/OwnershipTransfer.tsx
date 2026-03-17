@@ -154,7 +154,7 @@ const OwnershipTransfer = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="bg-muted rounded-lg p-4 text-sm text-muted-foreground">
-            <p>Ved at acceptere vil du blive den nye ejer. Den nuværende ejer vil blive degraderet til Admin.</p>
+            <p>Ved at acceptere vil du blive den nye formand. Den nuværende formand vil blive bestyrelsesmedlem.</p>
           </div>
           <Button className="w-full" onClick={handleAccept} disabled={accepting}>
             <CheckCircle2 className="h-4 w-4 mr-2" />

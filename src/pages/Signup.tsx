@@ -92,26 +92,8 @@ const Signup = () => {
 
     setLoading(true);
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: { full_name: name },
-        },
-      });
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Bruger blev ikke oprettet.");
-
-      if (authData.user.identities?.length === 0) {
-        toast.error("En bruger med denne e-mail eksisterer allerede.");
-        setLoading(false); return;
-      }
-
-      // Store all signup data for processing after email confirmation
-      localStorage.setItem("vedtaegt_pending_signup", JSON.stringify({
-        userId: authData.user.id,
+      // Build signup data to store in both localStorage AND user_metadata
+      const signupData = {
         name: name.trim(),
         email,
         orgName: orgName.trim(),
@@ -127,11 +109,37 @@ const Signup = () => {
         by: by_.trim() || null,
         foedselsdato: foedselsdato || null,
         marketingConsent,
+      };
+
+      // 1. Create auth user — store signup data in user_metadata for cross-browser recovery
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            full_name: name,
+            pending_signup: signupData,
+          },
+        },
+      });
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Bruger blev ikke oprettet.");
+
+      if (authData.user.identities?.length === 0) {
+        toast.error("En bruger med denne e-mail eksisterer allerede.");
+        setLoading(false); return;
+      }
+
+      // Also store in localStorage as fast-path for same-browser
+      localStorage.setItem("vedtaegt_pending_signup", JSON.stringify({
+        ...signupData,
+        userId: authData.user.id,
       }));
 
       if (authData.session) {
         // Auto-confirmed: process immediately
-        await processSignup(authData.user.id);
+        await processSignup(authData.user.id, signupData);
         navigate("/dashboard");
       } else {
         // Need email confirmation
@@ -144,10 +152,14 @@ const Signup = () => {
     }
   };
 
-  const processSignup = async (userId: string) => {
-    const pendingRaw = localStorage.getItem("vedtaegt_pending_signup");
-    if (!pendingRaw) return;
-    const p = JSON.parse(pendingRaw);
+  const processSignup = async (userId: string, p: any) => {
+    // Check idempotency: if member already exists, skip
+    const { data: existingMember } = await supabase
+      .from("members").select("id").eq("user_id", userId).maybeSingle();
+    if (existingMember) {
+      localStorage.removeItem("vedtaegt_pending_signup");
+      return;
+    }
 
     const { data: org, error: orgError } = await supabase
       .from("organizations")
@@ -389,7 +401,8 @@ const Signup = () => {
               {resending ? "Sender..." : "Send bekræftelsesmail igen"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              <Link to="/login" className="underline underline-offset-2">Gå til login</Link>
+              Har du allerede bekræftet?{" "}
+              <Link to="/login" className="text-foreground underline underline-offset-2">Log ind her</Link>
             </p>
           </div>
         )}

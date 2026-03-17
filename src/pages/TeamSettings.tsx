@@ -246,7 +246,7 @@ const TeamSettings = () => {
                     <TableCell className="hidden lg:table-cell text-muted-foreground">{(m as any).telefon || "—"}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{m.joined_at ? formatShortDate(m.joined_at) : "—"}</TableCell>
                     {perms.erFormand && (
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
                         {m.id !== memberId && (
                           <Switch
                             checked={m.er_fravaerende ?? false}

@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/components/AppLayout";
 import { formatShortDate } from "@/lib/format";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const filterTabs = [
 const MeetingsList = () => {
   const navigate = useNavigate();
   const { orgId } = useOrg();
+  const perms = usePermissions();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -60,10 +62,12 @@ const MeetingsList = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-display">Møder</h1>
-        <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
-          <Plus className="h-4 w-4 mr-1" />
-          Nyt møde
-        </Button>
+        {perms.kanOpretteMoeder && (
+          <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nyt møde
+          </Button>
+        )}
       </div>
 
       {/* Filter tabs */}

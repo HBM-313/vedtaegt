@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/components/AppLayout";
 import { formatShortDate } from "@/lib/format";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Plus, FileText, ClipboardCheck, FolderOpen, AlertTriangle } from "lucide-react";
 
 interface Meeting {
@@ -127,10 +128,12 @@ const Dashboard = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-display">Dashboard</h1>
-        <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
-          <Plus className="h-4 w-4 mr-1" />
-          Nyt møde
-        </Button>
+        {perms.kanOpretteMoeder && (
+          <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nyt møde
+          </Button>
+        )}
       </div>
 
       {deletionDate && (
@@ -199,7 +202,8 @@ const Dashboard = () => {
         </Section>
 
         {/* Recent documents */}
-        <Section title="Seneste dokumenter" icon={FolderOpen}>
+        {perms.kanSeDokumenter && <Section title="Seneste dokumenter" icon={FolderOpen}>
+
           {loading ? (
             <SkeletonRows />
           ) : documents.length === 0 ? (
@@ -218,7 +222,7 @@ const Dashboard = () => {
               ))}
             </div>
           )}
-        </Section>
+        </Section>}
       </div>
     </div>
   );
