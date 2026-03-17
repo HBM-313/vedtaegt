@@ -222,7 +222,7 @@ const Dashboard = () => {
               ))}
             </div>
           )}
-        </Section>
+        </Section>}
       </div>
     </div>
   );
