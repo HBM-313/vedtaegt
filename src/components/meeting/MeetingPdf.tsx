@@ -40,8 +40,15 @@ interface Props {
   onClose: () => void;
 }
 
+interface AgendaItem {
+  id: string;
+  title: string;
+  description: string | null;
+  sort_order: number | null;
+}
+
 interface PdfData {
-  agendaItems: { title: string; description: string | null; sort_order: number | null }[];
+  agendaItems: AgendaItem[];
   minutesContent: Record<string, string>;
   actionItems: { title: string; assignee: string; due_date: string | null }[];
   participants: { name: string; role: string }[];
@@ -55,7 +62,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
   useEffect(() => {
     const load = async () => {
       const [agendaRes, minutesRes, actionsRes, approvalsRes, docsRes] = await Promise.all([
-        supabase.from("agenda_items").select("title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
+        supabase.from("agenda_items").select("id, title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
         supabase.from("minutes").select("content").eq("meeting_id", meeting.id).maybeSingle(),
         supabase.from("action_items").select("title, due_date, members!action_items_assigned_to_fkey(name)").eq("meeting_id", meeting.id),
         supabase.from("approvals").select("approved_at, status, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id).eq("status", "godkendt"),
@@ -70,7 +77,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
       const approvalData = (approvalsRes.data || []) as any[];
       const docsData = (docsRes.data || []) as any[];
       setData({
-        agendaItems: (agendaRes.data || []) as any,
+        agendaItems: (agendaRes.data || []) as AgendaItem[],
         minutesContent: mc,
         actionItems: (actionsRes.data || []).map((a: any) => ({
           title: a.title,
@@ -136,14 +143,18 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
         <View>
           <Text style={styles.sectionTitle}>Dagsorden og referat</Text>
-          {data!.agendaItems.map((item, i) => (
-            <View key={i} style={styles.agendaItem}>
-              <Text style={styles.agendaTitle}>{i + 1}. {item.title}</Text>
-              {data!.minutesContent[Object.keys(data!.minutesContent)[i]] ? (
-                <Text style={styles.agendaContent}>{data!.minutesContent[Object.keys(data!.minutesContent)[i]]}</Text>
-              ) : null}
-            </View>
-          ))}
+          {data!.agendaItems.map((item, i) => {
+            // Map minutes by agenda_item.id instead of index
+            const minuteText = data!.minutesContent[item.id] || "";
+            return (
+              <View key={item.id} style={styles.agendaItem}>
+                <Text style={styles.agendaTitle}>{i + 1}. {item.title}</Text>
+                {minuteText ? (
+                  <Text style={styles.agendaContent}>{minuteText}</Text>
+                ) : null}
+              </View>
+            );
+          })}
         </View>
 
         {data!.actionItems.length > 0 && (

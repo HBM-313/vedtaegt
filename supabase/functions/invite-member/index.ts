@@ -24,19 +24,19 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Use getUser instead of getClaims for reliable auth
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     const { email, role, org_id } = await req.json();
     if (!email || !role || !org_id) {
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       .insert({
         org_id,
         email,
-        name: email.split("@")[0], // placeholder until they fill in their name
+        name: email.split("@")[0],
         role,
         invited_at: new Date().toISOString(),
         invitation_token: invitationToken,
@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
     // Send invitation email with token link
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
-    await fetch(sendEmailUrl, {
+    const emailRes = await fetch(sendEmailUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -148,8 +148,21 @@ Deno.serve(async (req) => {
       }),
     });
 
+    let emailWarning: string | null = null;
+    if (!emailRes.ok) {
+      const emailData = await emailRes.json().catch(() => ({}));
+      console.error("Email send failed:", JSON.stringify(emailData));
+      if (emailData?.is_test_domain_restriction) {
+        emailWarning = emailData.error;
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, member_id: newMember.id }),
+      JSON.stringify({
+        success: true,
+        member_id: newMember.id,
+        email_warning: emailWarning,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

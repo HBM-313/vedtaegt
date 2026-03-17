@@ -17,6 +17,7 @@ import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell
 import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
+import MeetingDocumentsTab from "@/components/meeting/MeetingDocumentsTab";
 import MeetingPdf from "@/components/meeting/MeetingPdf";
 import InPlatformApproval from "@/components/meeting/InPlatformApproval";
 
@@ -49,6 +50,7 @@ const MeetingDetail = () => {
   const [approvals, setApprovals] = useState<ApprovalRow[]>([]);
   const [rejector, setRejector] = useState<{ name: string; role: string } | null>(null);
   const [reminderLoading, setReminderLoading] = useState(false);
+  const [agendaItems, setAgendaItems] = useState<{ id: string; title: string }[]>([]);
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
@@ -66,7 +68,17 @@ const MeetingDetail = () => {
     setApprovals((data || []) as unknown as ApprovalRow[]);
   }, [id]);
 
-  useEffect(() => { loadMeeting(); loadApprovals(); }, [loadMeeting, loadApprovals]);
+  const loadAgendaItems = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from("agenda_items")
+      .select("id, title")
+      .eq("meeting_id", id)
+      .order("sort_order", { ascending: true });
+    setAgendaItems((data || []) as { id: string; title: string }[]);
+  }, [id]);
+
+  useEffect(() => { loadMeeting(); loadApprovals(); loadAgendaItems(); }, [loadMeeting, loadApprovals, loadAgendaItems]);
 
   // Load rejector info
   useEffect(() => {
@@ -110,7 +122,6 @@ const MeetingDetail = () => {
       const runde = (meeting.godkendelse_runde || 1) + (meeting.status === "active" && meeting.afvist_at ? 1 : 0);
       const actualRunde = meeting.afvist_at ? runde : (meeting.godkendelse_runde || 1);
 
-      // Update meeting
       await supabase.from("meetings").update({
         status: "pending_approval",
         godkendelse_frist_dage: fristDage,
@@ -121,10 +132,8 @@ const MeetingDetail = () => {
         sendt_af: memberId,
       }).eq("id", id);
 
-      // Delete existing pending approvals
       await supabase.from("approvals").delete().eq("meeting_id", id).eq("status", "afventer");
 
-      // Create new approvals for each member
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -141,7 +150,6 @@ const MeetingDetail = () => {
 
       await supabase.from("approvals").insert(newApprovals);
 
-      // Auto-approve sender's own approval
       if (memberId) {
         const senderApproval = newApprovals.find(a => a.member_id === memberId);
         if (senderApproval) {
@@ -158,19 +166,18 @@ const MeetingDetail = () => {
         }
       }
 
-      // Send emails
       const meetingDate = meeting.meeting_date
         ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
         : "ukendt dato";
 
-      // Get sender name
       const { data: senderMember } = await supabase.from("members")
         .select("name, email").eq("org_id", orgId!).eq("role", "formand").limit(1).single();
 
+      let emailWarningShown = false;
       for (const approval of newApprovals) {
         const member = members.find((m) => m.id === approval.member_id);
-        if (!member || member.id === memberId) continue; // Skip sender
-        await supabase.functions.invoke("send-email", {
+        if (!member || member.id === memberId) continue;
+        const { data: emailResult } = await supabase.functions.invoke("send-email", {
           body: {
             to: member.email,
             templateName: "approval_request",
@@ -186,6 +193,10 @@ const MeetingDetail = () => {
             },
           },
         });
+        if (emailResult?.is_test_domain_restriction && !emailWarningShown) {
+          toast.warning("E-mails kunne ikke sendes: Resend testdomæne kan kun sende til ejeren af API-nøglen. Medlemmerne kan godkende via linket i appen.", { duration: 8000 });
+          emailWarningShown = true;
+        }
       }
 
       await logAuditEvent("meeting.sent_for_approval", "meeting", id, {
@@ -223,8 +234,6 @@ const MeetingDetail = () => {
   const handleSendReminder = async () => {
     setReminderLoading(true);
     try {
-      const pending = approvals.filter((a) => a.status === "afventer");
-      // Re-fetch tokens for pending ones, excluding sender
       const { data: pendingWithTokens } = await supabase.from("approvals")
         .select("id, token, member_id, members!approvals_member_id_fkey(name, email)")
         .eq("meeting_id", id!)
@@ -265,7 +274,6 @@ const MeetingDetail = () => {
     }
   };
 
-  // Check if reminder button should be disabled (24h cooldown)
   const lastReminder = approvals.reduce<Date | null>((latest, a) => {
     if (!a.paamindelse_sendt_at) return latest;
     const d = new Date(a.paamindelse_sendt_at);
@@ -370,7 +378,6 @@ const MeetingDetail = () => {
             <span className="text-sm text-muted-foreground">{approvedCount}/{totalCount} ✓</span>
           </div>
 
-          {/* Progress bar */}
           <div className="w-full bg-muted rounded-full h-2 mb-4">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
@@ -378,7 +385,6 @@ const MeetingDetail = () => {
             />
           </div>
 
-          {/* Member list */}
           <div className="space-y-2 mb-4">
             {approvals.map((a) => (
               <div key={a.id} className="flex items-center justify-between text-sm">
@@ -401,7 +407,6 @@ const MeetingDetail = () => {
             ))}
           </div>
 
-          {/* Reminder button */}
           {pendingCount > 0 && (
             <Button
               size="sm"
@@ -423,10 +428,14 @@ const MeetingDetail = () => {
           <TabsTrigger value="agenda" className="text-xs">Dagsorden & referat</TabsTrigger>
           <TabsTrigger value="actions" className="text-xs">Handlingspunkter</TabsTrigger>
           <TabsTrigger value="participants" className="text-xs">Deltagere</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs">Dokumenter</TabsTrigger>
         </TabsList>
         <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
         <TabsContent value="actions"><ActionItemsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
         <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
+        <TabsContent value="documents">
+          <MeetingDocumentsTab meetingId={meeting.id} orgId={meeting.org_id!} agendaItems={agendaItems} />
+        </TabsContent>
       </Tabs>
 
       {showPdf && <MeetingPdf meeting={meeting} orgName={orgName || ""} onClose={() => setShowPdf(false)} />}

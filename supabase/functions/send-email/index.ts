@@ -6,7 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FROM_EMAIL = "Vedtægt <onboarding@resend.dev>";
+function getFromEmail(): string {
+  return Deno.env.get("RESEND_FROM_EMAIL") || "Vedtægt <onboarding@resend.dev>";
+}
 
 function getBaseUrl(): string {
   return "https://vedtaegt.lovable.app";
@@ -246,6 +248,7 @@ Deno.serve(async (req) => {
     }
 
     const { subject, html } = renderTemplate(templateName, templateData || {});
+    const fromEmail = getFromEmail();
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -254,7 +257,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,
+        from: fromEmail,
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
@@ -264,8 +267,26 @@ Deno.serve(async (req) => {
     const resendData = await resendRes.json();
 
     if (!resendRes.ok) {
-      console.error("Resend error:", resendData);
-      return new Response(JSON.stringify({ error: resendData.message || "Email send failed" }), {
+      console.error("Resend error:", JSON.stringify(resendData));
+
+      // Detect test-domain restriction
+      const isTestDomainError =
+        resendData?.name === "validation_error" ||
+        (resendData?.message && (
+          resendData.message.includes("can only send testing emails to your own email") ||
+          resendData.message.includes("verify") ||
+          resendData.message.includes("domain")
+        ));
+
+      const errorMessage = isTestDomainError
+        ? `E-mail kunne ikke sendes: Resend testdomæne (onboarding@resend.dev) kan kun sende til ejeren af API-nøglen. Tilføj et verificeret domæne for at sende til alle.`
+        : resendData.message || "Email send failed";
+
+      return new Response(JSON.stringify({
+        error: errorMessage,
+        resend_error: resendData?.name || null,
+        is_test_domain_restriction: isTestDomainError,
+      }), {
         status: resendRes.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

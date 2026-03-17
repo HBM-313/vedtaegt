@@ -209,51 +209,80 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Handle pending signup
+      // Handle pending signup — try localStorage first, then user_metadata
+      let pendingData: any = null;
+
       const pendingRaw = localStorage.getItem("vedtaegt_pending_signup");
       if (pendingRaw) {
         try {
-          const pending = JSON.parse(pendingRaw);
-          if (pending.userId === user.id || pending.email === user.email) {
-            const { data: existingMember } = await supabase
-              .from("members").select("id").eq("user_id", user.id).maybeSingle();
+          const parsed = JSON.parse(pendingRaw);
+          if (parsed.userId === user.id || parsed.email === user.email) {
+            pendingData = parsed;
+          }
+        } catch {
+          localStorage.removeItem("vedtaegt_pending_signup");
+        }
+      }
 
-            if (!existingMember) {
-              const { data: org, error: orgError } = await supabase
-                .from("organizations")
-                .insert({
-                  name: pending.orgName, cvr: pending.cvr, plan: "free",
-                  dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0",
-                  adresse: pending.orgAdresse || null,
-                  postnummer: pending.orgPostnummer || null,
-                  by: pending.orgBy || null,
-                  telefon: pending.orgTelefon || null,
-                  kontakt_email: pending.orgEmail || null,
-                } as any)
-                .select().single();
+      // Fallback: check user_metadata if localStorage empty
+      if (!pendingData && user.user_metadata?.pending_signup) {
+        pendingData = user.user_metadata.pending_signup;
+      }
 
-              if (!orgError && org) {
-                await supabase.rpc("insert_default_permissions", { p_org_id: org.id });
-                const now = new Date().toISOString();
-                await supabase.from("members").insert({
-                  org_id: org.id, user_id: user.id, role: "formand",
-                  name: pending.name, email: pending.email || user.email,
-                  joined_at: now, marketing_consent: pending.marketingConsent || false,
-                  marketing_consent_at: pending.marketingConsent ? now : null,
-                  telefon: pending.telefon || null,
-                  adresse: pending.adresse || null,
-                  postnummer: pending.postnummer || null,
-                  by: pending.by || null,
-                  foedselsdato: pending.foedselsdato || null,
-                  email_bekraeftet: true,
-                } as any);
+      if (pendingData) {
+        try {
+          const { data: existingMember } = await supabase
+            .from("members").select("id").eq("user_id", user.id).maybeSingle();
+
+          if (!existingMember) {
+            const { data: org, error: orgError } = await supabase
+              .from("organizations")
+              .insert({
+                name: pendingData.orgName, cvr: pendingData.cvr, plan: "free",
+                dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0",
+                adresse: pendingData.orgAdresse || null,
+                postnummer: pendingData.orgPostnummer || null,
+                by: pendingData.orgBy || null,
+                telefon: pendingData.orgTelefon || null,
+                kontakt_email: pendingData.orgEmail || null,
+              } as any)
+              .select().single();
+
+            if (orgError) {
+              console.error("Error creating org during signup completion:", orgError);
+              setContextError("Kunne ikke oprette foreningen. Prøv at logge ud og ind igen, eller kontakt support.");
+              return;
+            }
+
+            if (org) {
+              await supabase.rpc("insert_default_permissions", { p_org_id: org.id });
+              const now = new Date().toISOString();
+              const { error: memberError } = await supabase.from("members").insert({
+                org_id: org.id, user_id: user.id, role: "formand",
+                name: pendingData.name, email: pendingData.email || user.email,
+                joined_at: now, marketing_consent: pendingData.marketingConsent || false,
+                marketing_consent_at: pendingData.marketingConsent ? now : null,
+                telefon: pendingData.telefon || null,
+                adresse: pendingData.adresse || null,
+                postnummer: pendingData.postnummer || null,
+                by: pendingData.by || null,
+                foedselsdato: pendingData.foedselsdato || null,
+                email_bekraeftet: true,
+              } as any);
+
+              if (memberError) {
+                console.error("Error creating member during signup completion:", memberError);
               }
             }
-            localStorage.removeItem("vedtaegt_pending_signup");
           }
+          localStorage.removeItem("vedtaegt_pending_signup");
+          // Clear user_metadata pending_signup
+          await supabase.auth.updateUser({ data: { pending_signup: null } });
         } catch (err) {
           console.error("Error processing pending signup:", err);
           localStorage.removeItem("vedtaegt_pending_signup");
+          setContextError("Der opstod en fejl under oprettelsen af din forening. Prøv at logge ud og ind igen.");
+          return;
         }
       }
 
