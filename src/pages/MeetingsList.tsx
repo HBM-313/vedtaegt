@@ -29,6 +29,7 @@ const filterTabs = [
 const MeetingsList = () => {
   const navigate = useNavigate();
   const { orgId } = useOrg();
+  const perms = usePermissions();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
