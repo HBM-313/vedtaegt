@@ -204,7 +204,6 @@ const Dashboard = () => {
 
         {/* Recent documents */}
         {perms.kanSeDokumenter && <Section title="Seneste dokumenter" icon={FolderOpen}>
-
           {loading ? (
             <SkeletonRows />
           ) : documents.length === 0 ? (
@@ -212,15 +211,25 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-3">
               {documents.map((d) => (
-                <div key={d.id} className="flex items-center justify-between">
+                <button
+                  key={d.id}
+                  onClick={() => navigate("/dokumenter")}
+                  className="w-full flex items-center justify-between p-2 -m-2 rounded hover:bg-muted transition-colors text-left"
+                >
                   <div>
                     <p className="text-sm font-medium">{d.name}</p>
                     <p className="text-xs text-muted-foreground capitalize">
                       {d.category || "Andet"}
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
+              <button
+                onClick={() => navigate("/dokumenter")}
+                className="text-xs text-primary hover:underline mt-1"
+              >
+                Se alle dokumenter →
+              </button>
             </div>
           )}
         </Section>}
