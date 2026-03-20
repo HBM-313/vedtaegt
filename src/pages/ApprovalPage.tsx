@@ -27,6 +27,7 @@ interface ApprovalData {
   sender: { name: string; role: string };
   minutes_content: Record<string, string>;
   agenda_items: { id: string; title: string; sort_order: number | null }[];
+  afstemninger: Record<string, { spoergsmaal: string; ja_antal: number; nej_antal: number; undladt_antal: number; er_hemmelig: boolean; noter: string | null }>;
 }
 
 const ApprovalPage = () => {
@@ -77,17 +78,24 @@ const ApprovalPage = () => {
 
       // Load meeting, minutes, agenda, sender
       const meetingId = approval.meeting_id!;
-      const [meetingRes, minutesRes, agendaRes, senderRes] = await Promise.all([
+      const [meetingRes, minutesRes, agendaRes, senderRes, afstemningRes] = await Promise.all([
         supabase.from("meetings").select("title, meeting_date, org_id, godkendelse_runde, organizations!meetings_org_id_fkey(name)").eq("id", meetingId).single(),
         supabase.from("minutes").select("content").eq("meeting_id", meetingId).maybeSingle(),
         supabase.from("agenda_items").select("id, title, sort_order").eq("meeting_id", meetingId).order("sort_order", { ascending: true }),
         supabase.from("members").select("name, role").eq("org_id", approval.org_id!).eq("role", "formand").limit(1).maybeSingle(),
+        supabase.from("afstemninger").select("agenda_item_id, spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter").eq("meeting_id", meetingId),
       ]);
 
-      const meetingData = meetingRes.data as any;
+      interface MeetingRow {
+        title: string;
+        meeting_date: string | null;
+        godkendelse_runde: number | null;
+        organizations: { name: string } | null;
+      }
+      const meetingData = meetingRes.data as MeetingRow | null;
       let mc: Record<string, string> = {};
       if (minutesRes.data?.content) {
-        try { mc = JSON.parse(minutesRes.data.content); } catch {}
+        try { mc = JSON.parse(minutesRes.data.content); } catch (_) { mc = {}; }
       }
 
       setData({
@@ -98,11 +106,11 @@ const ApprovalPage = () => {
         meeting_id: meetingId,
         org_id: approval.org_id!,
         member_id: approval.member_id!,
-        member_name: (approval.members as any)?.name || "Ukendt",
+        member_name: (approval.members as { name: string } | null)?.name || "Ukendt",
         meeting: {
           title: meetingData?.title || "",
           meeting_date: meetingData?.meeting_date || null,
-          org_name: (meetingData?.organizations as any)?.name || "",
+          org_name: meetingData?.organizations?.name || "",
           godkendelse_runde: meetingData?.godkendelse_runde || 1,
         },
         sender: {
@@ -110,7 +118,11 @@ const ApprovalPage = () => {
           role: senderRes.data?.role || "formand",
         },
         minutes_content: mc,
-        agenda_items: (agendaRes.data || []) as any,
+        agenda_items: (agendaRes.data || []) as { id: string; title: string; sort_order: number | null }[],
+        afstemninger: Object.fromEntries(
+          ((afstemningRes.data || []) as { agenda_item_id: string; spoergsmaal: string; ja_antal: number; nej_antal: number; undladt_antal: number; er_hemmelig: boolean; noter: string | null }[])
+            .map((a) => [a.agenda_item_id, a])
+        ),
       });
       setLoading(false);
     };
@@ -157,8 +169,8 @@ const ApprovalPage = () => {
                     meetingId: data.meeting_id,
                     approvalCount: allApprovals.length,
                     approvals: allApprovals.map((a) => ({
-                      name: (a.members as any)?.name || "Ukendt",
-                      role: getRoleLabel((a.members as any)?.role || ""),
+                      name: (a.members as { name: string; role: string } | null)?.name || "Ukendt",
+                      role: getRoleLabel((a.members as { name: string; role: string } | null)?.role || ""),
                       date: a.approved_at ? new Intl.DateTimeFormat("da-DK", {
                         day: "numeric", month: "short", year: "numeric",
                         hour: "2-digit", minute: "2-digit",
@@ -174,8 +186,9 @@ const ApprovalPage = () => {
 
       setResultState("godkendt");
       setResultTime(now);
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke registrere godkendelse.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke registrere godkendelse.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -226,8 +239,9 @@ const ApprovalPage = () => {
 
       setShowReject(false);
       setResultState("afvist");
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke registrere afvisning.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke registrere afvisning.";
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -317,10 +331,26 @@ const ApprovalPage = () => {
                 <div className="p-4 border-b border-border">
                   <h3 className="text-sm font-semibold">{i + 1}. {item.title}</h3>
                 </div>
-                <div className="p-4">
+                <div className="p-4 space-y-3">
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                     {content || "Intet referat for dette punkt."}
                   </p>
+                  {data!.afstemninger[item.id] && (() => {
+                    const a = data!.afstemninger[item.id];
+                    const total = a.ja_antal + a.nej_antal + a.undladt_antal;
+                    return (
+                      <div className="rounded-sm bg-muted/40 border border-border p-3 text-sm space-y-1">
+                        <p className="font-medium text-xs">{a.er_hemmelig ? "Hemmelig afstemning" : "Afstemning"}: {a.spoergsmaal}</p>
+                        <div className="flex gap-4 text-xs">
+                          <span className="text-green-700 dark:text-green-400">Ja: {a.ja_antal}</span>
+                          <span className="text-red-700 dark:text-red-400">Nej: {a.nej_antal}</span>
+                          <span className="text-muted-foreground">Undladt: {a.undladt_antal}</span>
+                          <span className="text-muted-foreground">I alt: {total}</span>
+                        </div>
+                        {a.noter && <p className="text-xs text-muted-foreground italic">{a.noter}</p>}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );

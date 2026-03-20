@@ -32,6 +32,7 @@ interface Meeting {
   id: string; title: string; meeting_date: string | null;
   location: string | null; approved_at: string | null;
   godkendelse_runde?: number | null;
+  meeting_type?: string | null;
 }
 
 interface Props {
@@ -156,6 +157,13 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
         <View style={styles.header}>
           <Text style={styles.orgName}>{orgName}</Text>
           <Text style={styles.title}>{meeting.title}</Text>
+          {meeting.meeting_type && meeting.meeting_type !== "bestyrelsesoede" && (
+            <Text style={{ fontSize: 10, color: "#6b21a8", marginBottom: 4 }}>
+              {meeting.meeting_type === "ordinaer_generalforsamling"
+                ? "Ordinær generalforsamling"
+                : "Ekstraordinær generalforsamling"}
+            </Text>
+          )}
           <Text style={styles.meta}>
             {meeting.meeting_date ? formatDanishDate(meeting.meeting_date) : ""}
             {meeting.location ? ` · ${meeting.location}` : ""}

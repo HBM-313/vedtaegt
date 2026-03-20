@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +26,7 @@ interface Meeting {
   location: string | null; status: string | null; approved_at: string | null; org_id: string | null;
   godkendelse_frist_dage: number | null; afvist_af: string | null; afvist_at: string | null;
   afvist_kommentar: string | null; godkendelse_runde: number | null; sendt_af: string | null;
+  meeting_type: string | null;
 }
 
 interface ApprovalRow {
@@ -209,8 +210,9 @@ const MeetingDetail = () => {
       setShowSendModal(false);
       await loadMeeting();
       await loadApprovals();
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke sende til godkendelse.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke sende til godkendelse.";
+      toast.error(msg);
     } finally {
       setStatusLoading(false);
     }
@@ -224,8 +226,9 @@ const MeetingDetail = () => {
       await logAuditEvent("meeting.status_changed", "meeting", id, { from: "draft", to: "active" });
       toast.success("Mødet er startet.");
       await loadMeeting();
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke starte mødet.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke starte mødet.";
+      toast.error(msg);
     } finally {
       setStatusLoading(false);
     }
@@ -246,7 +249,7 @@ const MeetingDetail = () => {
       const done = approvals.filter((a) => a.status === "godkendt").length;
 
       for (const a of pendingWithTokens) {
-        const member = a.members as any;
+        const member = a.members as { name: string; email: string } | null;
         if (!member?.email || !a.token) continue;
         await supabase.functions.invoke("send-email", {
           body: {
@@ -267,8 +270,9 @@ const MeetingDetail = () => {
       await logAuditEvent("meeting.paamindelse_sendt", "meeting", id!, { antal: pendingWithTokens.length });
       toast.success(`Påmindelse sendt til ${pendingWithTokens.length} medlemmer.`);
       await loadApprovals();
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke sende påmindelse.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke sende påmindelse.";
+      toast.error(msg);
     } finally {
       setReminderLoading(false);
     }
@@ -304,6 +308,7 @@ const MeetingDetail = () => {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-semibold tracking-display">{meeting.title}</h1>
             <StatusBadge status={meeting.status || "draft"} />
+            <MeetingTypeBadge meetingType={meeting.meeting_type || "bestyrelsesoede"} />
           </div>
           <p className="text-sm text-muted-foreground">
             {meeting.meeting_date ? formatDate(meeting.meeting_date) : "Dato ikke fastsat"}

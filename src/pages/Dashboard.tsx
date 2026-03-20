@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/context/OrgContext";
 import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -14,6 +14,7 @@ interface Meeting {
   title: string;
   meeting_date: string | null;
   status: string | null;
+  meeting_type: string | null;
 }
 
 interface ActionItem {
@@ -59,7 +60,7 @@ const Dashboard = () => {
       const [meetingsRes, actionsRes, docsRes] = await Promise.all([
         supabase
           .from("meetings")
-          .select("id, title, meeting_date, status")
+          .select("id, title, meeting_date, status, meeting_type")
           .eq("org_id", orgId)
           .gte("meeting_date", new Date().toISOString())
           .order("meeting_date", { ascending: true })
@@ -172,7 +173,10 @@ const Dashboard = () => {
                       </p>
                     )}
                   </div>
-                  <StatusBadge status={m.status || "draft"} />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={m.status || "draft"} />
+                    <MeetingTypeBadge meetingType={m.meeting_type || "bestyrelsesoede"} />
+                  </div>
                 </button>
               ))}
             </div>
@@ -192,7 +196,7 @@ const Dashboard = () => {
                   <div>
                     <p className="text-sm font-medium">{a.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {(a.meetings as any)?.title || "Intet møde"}
+                      {a.meetings?.title || "Intet møde"}
                       {a.due_date && ` · Frist: ${formatShortDate(a.due_date)}`}
                     </p>
                   </div>
