@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/context/OrgContext";
 import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -16,6 +16,7 @@ interface Meeting {
   meeting_date: string | null;
   location: string | null;
   status: string | null;
+  meeting_type: string | null;
 }
 
 const filterTabs = [
@@ -41,7 +42,7 @@ const MeetingsList = () => {
       setLoading(true);
       let query = supabase
         .from("meetings")
-        .select("id, title, meeting_date, location, status")
+        .select("id, title, meeting_date, location, status, meeting_type")
         .eq("org_id", orgId)
         .order("meeting_date", { ascending: false });
 
@@ -126,7 +127,12 @@ const MeetingsList = () => {
                   onClick={() => navigate(`/moeder/${m.id}`)}
                   className="border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
                 >
-                  <td className="p-3 text-sm font-medium">{m.title}</td>
+                  <td className="p-3 text-sm font-medium">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {m.title}
+                      <MeetingTypeBadge meetingType={m.meeting_type || "bestyrelsesoede"} />
+                    </div>
+                  </td>
                   <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
                     {m.meeting_date ? formatShortDate(m.meeting_date) : "—"}
                   </td>

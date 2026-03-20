@@ -10,7 +10,7 @@ import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User,
+  BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User, ScrollText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { OrgContext, useOrg } from "@/context/OrgContext";
@@ -37,6 +37,7 @@ function AppSidebar() {
     { title: "Møder", url: "/moeder", icon: FileText },
     { title: "Handlingspunkter", url: "/handlingspunkter", icon: ClipboardCheck },
     { title: "Dokumenter", url: "/dokumenter", icon: FolderOpen },
+    { title: "Vedtægter", url: "/vedtaegter", icon: ScrollText },
   ];
 
   const handleLogout = async () => {

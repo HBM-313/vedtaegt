@@ -4,14 +4,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOrg } from "@/context/OrgContext";
-import { Plus } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Plus, Vote } from "lucide-react";
 import AddActionItemDialog from "./AddActionItemDialog";
+import AfstemningDialog from "./AfstemningDialog";
 
 interface AgendaItem {
   id: string;
   title: string;
   description: string | null;
   sort_order: number | null;
+}
+
+interface Afstemning {
+  id: string;
+  agenda_item_id: string;
+  spoergsmaal: string;
+  ja_antal: number;
+  nej_antal: number;
+  undladt_antal: number;
+  er_hemmelig: boolean;
+  noter: string | null;
 }
 
 interface Props {
@@ -21,18 +34,21 @@ interface Props {
 
 const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
   const { memberId } = useOrg();
+  const perms = usePermissions();
   const [items, setItems] = useState<AgendaItem[]>([]);
   const [minutesContent, setMinutesContent] = useState<Record<string, string>>({});
   const [minutesId, setMinutesId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [addingForItem, setAddingForItem] = useState<string | null>(null);
+  const [afstemningForItem, setAfstemningForItem] = useState<string | null>(null);
+  const [afstemninger, setAfstemninger] = useState<Record<string, Afstemning>>({});
   const contentRef = useRef(minutesContent);
   contentRef.current = minutesContent;
 
   useEffect(() => {
     const load = async () => {
-      const [agendaRes, minutesRes] = await Promise.all([
+      const [agendaRes, minutesRes, afstemningRes] = await Promise.all([
         supabase
           .from("agenda_items")
           .select("id, title, description, sort_order")
@@ -44,6 +60,10 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
           .eq("meeting_id", meetingId)
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from("afstemninger")
+          .select("id, agenda_item_id, spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter")
+          .eq("meeting_id", meetingId),
       ]);
 
       setItems((agendaRes.data as AgendaItem[]) || []);
@@ -57,6 +77,15 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
           setMinutesContent({});
         }
       }
+
+      if (afstemningRes.data) {
+        const map: Record<string, Afstemning> = {};
+        (afstemningRes.data as Afstemning[]).forEach((a) => {
+          map[a.agenda_item_id] = a;
+        });
+        setAfstemninger(map);
+      }
+
       setLoading(false);
     };
     load();
@@ -148,14 +177,44 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
               placeholder="Skriv referat for dette punkt..."
               className="min-h-[100px] text-sm"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAddingForItem(item.id)}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Tilføj handlingspunkt
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddingForItem(item.id)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Tilføj handlingspunkt
+              </Button>
+              {perms.kanRedigereMoeder && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAfstemningForItem(item.id)}
+                >
+                  <Vote className="h-4 w-4 mr-1" />
+                  {afstemninger[item.id] ? "Rediger afstemning" : "Registrér afstemning"}
+                </Button>
+              )}
+            </div>
+
+            {/* Vis eksisterende afstemning */}
+            {afstemninger[item.id] && (() => {
+              const a = afstemninger[item.id];
+              const total = a.ja_antal + a.nej_antal + a.undladt_antal;
+              return (
+                <div className="rounded-sm bg-muted/40 border border-border p-3 text-sm space-y-1">
+                  <p className="font-medium text-xs">{a.er_hemmelig ? "Hemmelig afstemning" : "Afstemning"}: {a.spoergsmaal}</p>
+                  <div className="flex gap-4 text-xs">
+                    <span className="text-green-700 dark:text-green-400">Ja: {a.ja_antal}</span>
+                    <span className="text-red-700 dark:text-red-400">Nej: {a.nej_antal}</span>
+                    <span className="text-muted-foreground">Undladt: {a.undladt_antal}</span>
+                    <span className="text-muted-foreground">I alt: {total}</span>
+                  </div>
+                  {a.noter && <p className="text-xs text-muted-foreground italic">{a.noter}</p>}
+                </div>
+              );
+            })()}
           </div>
         </div>
       ))}
@@ -172,6 +231,24 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
           onClose={() => setAddingForItem(null)}
         />
       )}
+
+      {afstemningForItem && (() => {
+        const currentItem = items.find((i) => i.id === afstemningForItem);
+        return (
+          <AfstemningDialog
+            meetingId={meetingId}
+            orgId={orgId}
+            agendaItemId={afstemningForItem}
+            agendaItemTitle={currentItem?.title ?? ""}
+            existing={afstemninger[afstemningForItem] ?? null}
+            onClose={() => setAfstemningForItem(null)}
+            onSaved={(saved) => {
+              setAfstemninger((prev) => ({ ...prev, [afstemningForItem]: saved }));
+              setAfstemningForItem(null);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

@@ -16,7 +16,13 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { da } from "date-fns/locale";
-import { CalendarIcon, Plus, Trash2, GripVertical } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, GripVertical, Wand2 } from "lucide-react";
+import {
+  type MeetingType,
+  MEETING_TYPE_OPTIONS,
+  GF_STANDARD_AGENDA,
+  isGeneralforsamling,
+} from "@/lib/meetingTypes";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -72,6 +78,7 @@ const CreateMeeting = () => {
   const perms = usePermissions();
   const [loading, setLoading] = useState(false);
 
+  const [meetingType, setMeetingType] = useState<MeetingType>("bestyrelsesoede");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("10:00");
@@ -98,6 +105,19 @@ const CreateMeeting = () => {
 
   const addAgendaItem = () => {
     setAgendaItems((prev) => [...prev, { id: crypto.randomUUID(), title: "", description: "" }]);
+  };
+
+  const fillStandardGFAgenda = () => {
+    if (agendaItems.length > 0) {
+      if (!confirm("Dette vil erstatte de nuværende dagsordenspunkter med standard GF-punkter. Fortsæt?")) return;
+    }
+    setAgendaItems(
+      GF_STANDARD_AGENDA.map((titel) => ({
+        id: crypto.randomUUID(),
+        title: titel,
+        description: "",
+      }))
+    );
   };
   const updateAgendaItem = (id: string, field: "title" | "description", value: string) => {
     setAgendaItems((prev) => prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
@@ -140,7 +160,7 @@ const CreateMeeting = () => {
       }
 
       const { data: meeting, error: meetingError } = await supabase
-        .from("meetings").insert({ org_id: orgId, title: title.trim(), meeting_date: meetingDate, location: location.trim() || null, status: "draft", created_by: memberId })
+        .from("meetings").insert({ org_id: orgId, title: title.trim(), meeting_date: meetingDate, location: location.trim() || null, status: "draft", created_by: memberId, meeting_type: meetingType })
         .select().single();
       if (meetingError) throw meetingError;
 
@@ -161,8 +181,9 @@ const CreateMeeting = () => {
       await logAuditEvent("meeting.created", "meeting", meeting.id, { title: title.trim(), agenda_items_count: validItems.length, participants_count: selectedMembers.length });
       toast.success("Mødet er oprettet.");
       navigate(`/moeder/${meeting.id}`);
-    } catch (err: any) {
-      toast.error(err.message || "Kunne ikke oprette mødet.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke oprette mødet.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -172,6 +193,30 @@ const CreateMeeting = () => {
     <div className="max-w-2xl">
       <h1 className="text-2xl font-semibold tracking-display mb-6">Opret møde</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Møde-type */}
+        <div className="space-y-2">
+          <Label className="text-xs">Møde-type</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {MEETING_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setMeetingType(opt.value)}
+                className={cn(
+                  "text-left p-3 rounded-sm ring-1 transition-colors",
+                  meetingType === opt.value
+                    ? "ring-primary bg-primary/5"
+                    : "ring-border hover:bg-muted/40"
+                )}
+              >
+                <p className="text-sm font-medium">{opt.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{opt.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="title" className="text-xs">Mødets titel</Label>
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="F.eks. Ordinær generalforsamling 2025" required />
@@ -214,9 +259,16 @@ const CreateMeeting = () => {
               </div>
             </SortableContext>
           </DndContext>
-          <Button type="button" variant="outline" size="sm" onClick={addAgendaItem}>
-            <Plus className="h-4 w-4 mr-1" /> Tilføj punkt
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button type="button" variant="outline" size="sm" onClick={addAgendaItem}>
+              <Plus className="h-4 w-4 mr-1" /> Tilføj punkt
+            </Button>
+            {isGeneralforsamling(meetingType) && (
+              <Button type="button" variant="outline" size="sm" onClick={fillStandardGFAgenda}>
+                <Wand2 className="h-4 w-4 mr-1" /> Standard GF-dagsorden
+              </Button>
+            )}
+          </div>
         </div>
 
         {orgMembers.length > 0 && (

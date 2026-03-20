@@ -47,6 +47,16 @@ interface AgendaItem {
   sort_order: number | null;
 }
 
+interface AfstemningPdf {
+  spoergsmaal: string;
+  ja_antal: number;
+  nej_antal: number;
+  undladt_antal: number;
+  er_hemmelig: boolean;
+  noter: string | null;
+  agenda_item_id: string;
+}
+
 interface PdfData {
   agendaItems: AgendaItem[];
   minutesContent: Record<string, string>;
@@ -54,6 +64,7 @@ interface PdfData {
   participants: { name: string; role: string }[];
   approvals: { name: string; role: string; approved_at: string | null }[];
   documents: { name: string; category: string | null; uploader: string; created_at: string | null; agenda_item_title: string | null }[];
+  afstemninger: AfstemningPdf[];
 }
 
 const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
@@ -61,25 +72,45 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
   useEffect(() => {
     const load = async () => {
-      const [agendaRes, minutesRes, actionsRes, approvalsRes, docsRes] = await Promise.all([
+      const [agendaRes, minutesRes, actionsRes, approvalsRes, docsRes, afstemningRes] = await Promise.all([
         supabase.from("agenda_items").select("id, title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
         supabase.from("minutes").select("content").eq("meeting_id", meeting.id).maybeSingle(),
         supabase.from("action_items").select("title, due_date, members!action_items_assigned_to_fkey(name)").eq("meeting_id", meeting.id),
         supabase.from("approvals").select("approved_at, status, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id).eq("status", "godkendt"),
         supabase.from("documents").select("name, category, created_at, uploaded_by, agenda_item_id, members!documents_uploaded_by_fkey(name), agenda_items!documents_agenda_item_id_fkey(title)").eq("meeting_id", meeting.id),
+        supabase.from("afstemninger").select("spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter, agenda_item_id").eq("meeting_id", meeting.id),
       ]);
 
       let mc: Record<string, string> = {};
       if (minutesRes.data?.content) {
-        try { mc = JSON.parse(minutesRes.data.content); } catch {}
+        try { mc = JSON.parse(minutesRes.data.content); } catch (_) { mc = {}; }
       }
 
-      const approvalData = (approvalsRes.data || []) as any[];
-      const docsData = (docsRes.data || []) as any[];
+      interface ApprovalRow {
+        approved_at: string | null;
+        status: string | null;
+        members: { name: string; role: string } | null;
+      }
+      interface DocRow {
+        name: string;
+        category: string | null;
+        created_at: string | null;
+        uploaded_by: string | null;
+        agenda_item_id: string | null;
+        members: { name: string } | null;
+        agenda_items: { title: string } | null;
+      }
+      interface ActionRow {
+        title: string;
+        due_date: string | null;
+        members: { name: string } | null;
+      }
+      const approvalData = (approvalsRes.data || []) as ApprovalRow[];
+      const docsData = (docsRes.data || []) as DocRow[];
       setData({
         agendaItems: (agendaRes.data || []) as AgendaItem[],
         minutesContent: mc,
-        actionItems: (actionsRes.data || []).map((a: any) => ({
+        actionItems: (actionsRes.data || []).map((a: ActionRow) => ({
           title: a.title,
           assignee: a.members?.name || "Ikke tildelt",
           due_date: a.due_date,
@@ -93,13 +124,14 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           role: a.members?.role || "",
           approved_at: a.approved_at,
         })),
-        documents: docsData.map((d: any) => ({
+        documents: docsData.map((d: DocRow) => ({
           name: d.name,
           category: d.category,
           uploader: d.members?.name || "Ukendt",
           created_at: d.created_at,
           agenda_item_title: d.agenda_items?.title || null,
         })),
+        afstemninger: (afstemningRes.data || []) as AfstemningPdf[],
       });
     };
     load();
@@ -198,6 +230,29 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
               </View>
             )}
             <Text style={{ fontSize: 8, color: "#666", marginTop: 4 }}>Dokumenterne kan tilgås via Vedtægt-platformen.</Text>
+          </View>
+        )}
+
+        {/* Afstemninger section */}
+        {data!.afstemninger.length > 0 && (
+          <View>
+            <Text style={styles.sectionTitle}>Afstemninger</Text>
+            {data!.afstemninger.map((a, i) => {
+              const total = a.ja_antal + a.nej_antal + a.undladt_antal;
+              return (
+                <View key={i} style={styles.agendaItem}>
+                  <Text style={styles.agendaTitle}>
+                    {a.er_hemmelig ? "Hemmelig afstemning" : "Afstemning"}: {a.spoergsmaal}
+                  </Text>
+                  <Text style={styles.agendaContent}>
+                    Ja: {a.ja_antal}  ·  Nej: {a.nej_antal}  ·  Undladt: {a.undladt_antal}  ·  I alt: {total}
+                  </Text>
+                  {a.noter ? (
+                    <Text style={styles.agendaContent}>Note: {a.noter}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
           </View>
         )}
 

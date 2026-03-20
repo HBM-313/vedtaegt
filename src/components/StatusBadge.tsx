@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getMeetingTypeShort, isGeneralforsamling } from "@/lib/meetingTypes";
 
 type MeetingStatus = "draft" | "active" | "pending_approval" | "approved";
 
@@ -23,10 +24,22 @@ const statusConfig: Record<MeetingStatus, { label: string; className: string }> 
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const config = statusConfig[(status as MeetingStatus)] || statusConfig.draft;
+  const config = statusConfig[status as MeetingStatus] || statusConfig.draft;
   return (
     <Badge variant="outline" className={cn("text-xs font-medium", config.className)}>
       {config.label}
+    </Badge>
+  );
+}
+
+export function MeetingTypeBadge({ meetingType }: { meetingType: string }) {
+  if (!meetingType || meetingType === "bestyrelsesoede") return null;
+  return (
+    <Badge
+      variant="outline"
+      className="text-xs font-medium bg-purple-100 text-purple-800 border-transparent dark:bg-purple-900/30 dark:text-purple-400"
+    >
+      {getMeetingTypeShort(meetingType)}
     </Badge>
   );
 }
