@@ -11,7 +11,7 @@ export interface CvrData {
 }
 
 // ─────────────────────────────────────────────
-// Primær: Supabase Edge Function
+// Primær: Supabase Edge Function (server-side)
 // ─────────────────────────────────────────────
 async function lookupViaEdgeFunction(cvr: string): Promise<CvrData | null> {
   try {
@@ -26,71 +26,25 @@ async function lookupViaEdgeFunction(cvr: string): Promise<CvrData | null> {
 }
 
 // ─────────────────────────────────────────────
-// Fallback: Erhvervsstyrelsens åbne CVR API
-// Tilgængeligt direkte fra browser (CORS tilladt)
-// Kræver ingen nøgle
+// Fallback: cvrapi.dk direkte fra browser
+// cvrapi.dk blokerer cloud/server IP-ranges men tillader browser-kald.
+// Browseren sætter automatisk User-Agent — ingen ekstra header nødvendig.
 // ─────────────────────────────────────────────
-async function lookupViaVirk(cvr: string): Promise<CvrData | null> {
+async function lookupViaCvrApi(cvr: string): Promise<CvrData | null> {
   try {
-    const res = await fetch(
-      "https://distribution.virk.dk/cvr-permanent/virksomhed/_search",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: {
-            term: { "Vrvirksomhed.cvrNummer": parseInt(cvr, 10) },
-          },
-          _source: [
-            "Vrvirksomhed.cvrNummer",
-            "Vrvirksomhed.virksomhedMetadata.nyesteNavn",
-            "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse",
-            "Vrvirksomhed.virksomhedMetadata.nyesteKontaktoplysninger",
-          ],
-          size: 1,
-        }),
-      }
-    );
-
+    const res = await fetch(`https://cvrapi.dk/api?search=${cvr}&country=dk`);
     if (!res.ok) return null;
 
-    const json = await res.json();
-    const hit = json?.hits?.hits?.[0]?._source?.Vrvirksomhed;
-    if (!hit) return null;
-
-    const meta = hit.virksomhedMetadata ?? {};
-    const navn: string | null = meta.nyesteNavn?.navn ?? null;
-    const adr = meta.nyesteBeliggenhedsadresse ?? null;
-    const kontakt: Array<{ kontaktoplysning: string; hemmelig?: boolean }> =
-      meta.nyesteKontaktoplysninger ?? [];
-
-    // Byg gadenavn + husnummer + etage
-    let vejnavn: string | null = null;
-    if (adr?.vejnavn) {
-      vejnavn = adr.vejnavn;
-      if (adr.husnummerFra) vejnavn += ` ${adr.husnummerFra}`;
-      if (adr.bogstavFra) vejnavn += adr.bogstavFra;
-      if (adr.etage) vejnavn += `, ${adr.etage}`;
-      if (adr.sidedoer) vejnavn += `. ${adr.sidedoer}`;
-    }
-
-    // Udtræk telefon og email fra kontaktliste
-    const findKontakt = (prefix: string): string | null => {
-      const match = kontakt.find(
-        (k) => !k.hemmelig && k.kontaktoplysning?.startsWith(prefix)
-      );
-      if (!match) return null;
-      const parts = match.kontaktoplysning.split(": ");
-      return parts.length > 1 ? parts.slice(1).join(": ").trim() : match.kontaktoplysning.trim();
-    };
+    const data = await res.json();
+    if (data.error) return null;
 
     return {
-      navn: navn ?? "",
-      adresse: vejnavn,
-      postnummer: adr?.postnummer ? String(adr.postnummer) : null,
-      by: adr?.postdistrikt ?? null,
-      telefon: findKontakt("Telefon"),
-      email: findKontakt("Email"),
+      navn: data.name ?? "",
+      adresse: data.address ?? null,
+      postnummer: data.zipcode ? String(data.zipcode) : null,
+      by: data.city ?? null,
+      telefon: data.phone ?? null,
+      email: data.email ?? null,
     };
   } catch {
     return null;
@@ -98,7 +52,7 @@ async function lookupViaVirk(cvr: string): Promise<CvrData | null> {
 }
 
 // ─────────────────────────────────────────────
-// Hook — edge function primær, Virk.dk fallback
+// Hook — edge function primær, cvrapi.dk fallback
 // ─────────────────────────────────────────────
 export function useCvrLookup() {
   const lookup = useCallback(async (cvr: string): Promise<CvrData | null> => {
@@ -108,9 +62,9 @@ export function useCvrLookup() {
     const edgeResult = await lookupViaEdgeFunction(cvr);
     if (edgeResult) return edgeResult;
 
-    // Edge function fejlede — brug direkte API som fallback
-    console.warn("useCvrLookup: edge function utilgængelig, falder tilbage til Virk.dk API");
-    return lookupViaVirk(cvr);
+    // Edge function utilgængelig — brug cvrapi.dk direkte fra browser
+    console.warn("useCvrLookup: edge function utilgængelig, falder tilbage til cvrapi.dk");
+    return lookupViaCvrApi(cvr);
   }, []);
 
   return { lookup };
