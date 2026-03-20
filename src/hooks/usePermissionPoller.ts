@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fetchPermissions, fetchMembers } from "@/hooks/useOrgLoader";
 import type { RolePermission, OrgMember } from "@/context/OrgContext";
+import type { Database } from "@/integrations/supabase/types";
+
+type OrganizationRow = Database["public"]["Tables"]["organizations"]["Row"];
 
 interface PollerOptions {
   orgId: string | null;
@@ -11,12 +14,11 @@ interface PollerOptions {
 }
 
 // Poller permission_version på organizations-tabellen hvert 60s.
-// Når versionen ændrer sig (formand har opdateret tilladelser),
-// genindlæses permissions + members og brugeren adviseres.
+// Når versionen ændrer sig genindlæses permissions + members.
 export function usePermissionPoller({ orgId, onUpdate, intervalMs = 60_000 }: PollerOptions) {
   const permVersionRef = useRef<number | null>(null);
 
-  // Sæt initial version når orgId kendes
+  // Hent initial version når orgId er klar
   useEffect(() => {
     if (!orgId) return;
 
@@ -30,7 +32,8 @@ export function usePermissionPoller({ orgId, onUpdate, intervalMs = 60_000 }: Po
           console.error("usePermissionPoller: kunne ikke hente initial version:", error.message);
           return;
         }
-        permVersionRef.current = (data as any)?.permission_version ?? 1;
+        permVersionRef.current = (data as Pick<OrganizationRow, "permission_version">)
+          ?.permission_version ?? 1;
       });
   }, [orgId]);
 
@@ -50,7 +53,8 @@ export function usePermissionPoller({ orgId, onUpdate, intervalMs = 60_000 }: Po
         return;
       }
 
-      const newVersion = (data as any)?.permission_version ?? 1;
+      const newVersion =
+        (data as Pick<OrganizationRow, "permission_version">)?.permission_version ?? 1;
 
       if (permVersionRef.current !== null && newVersion !== permVersionRef.current) {
         permVersionRef.current = newVersion;

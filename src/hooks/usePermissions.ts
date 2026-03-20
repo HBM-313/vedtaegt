@@ -1,4 +1,4 @@
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 
 export interface Permissions {
   kanOpretteMoeder: boolean;

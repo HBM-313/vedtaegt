@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg, type RolePermission } from "@/components/AppLayout";
+import { useOrg, type RolePermission } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { getRoleLabel, type DanishRole } from "@/lib/roles";

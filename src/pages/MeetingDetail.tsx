@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";

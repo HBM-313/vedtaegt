@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { getRoleLabel } from "@/lib/roles";

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Plus, FileText, ClipboardCheck, FolderOpen, AlertTriangle } from "lucide-react";

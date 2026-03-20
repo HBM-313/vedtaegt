@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";

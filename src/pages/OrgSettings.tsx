@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";

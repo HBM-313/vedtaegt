@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useOrg } from "@/components/AppLayout";
+import { useOrg } from "@/context/OrgContext";
 import { Plus } from "lucide-react";
 import AddActionItemDialog from "./AddActionItemDialog";
 

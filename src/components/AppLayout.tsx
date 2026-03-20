@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,15 +13,10 @@ import {
   BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User,
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Context + typer
 import { OrgContext, useOrg } from "@/context/OrgContext";
-export type { RolePermission, OrgMember } from "@/context/OrgContext";
-export { useOrg };
-
-// Hooks
 import { useOrgLoader } from "@/hooks/useOrgLoader";
 import { usePermissionPoller } from "@/hooks/usePermissionPoller";
+import type { RolePermission, OrgMember } from "@/context/OrgContext";
 
 // ─────────────────────────────────────────────
 // Sidebar
@@ -134,7 +129,7 @@ function AppSidebar() {
 }
 
 // ─────────────────────────────────────────────
-// Loading skeleton vist mens org hentes
+// Loading skeleton
 // ─────────────────────────────────────────────
 function AppLoadingSkeleton() {
   return (
@@ -184,46 +179,38 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
-  const {
-    orgState,
-    loading,
-    error,
-    load,
-    updatePermissionsAndMembers,
-    refetchForOrg,
-    setOrgState,
-  } = useOrgLoader();
+  const { orgState, loading, error, load, refetchForOrg, setOrgState } = useOrgLoader();
 
-  // Indlæs org ved mount
   useEffect(() => {
     load();
   }, [load]);
 
-  // Poll tilladelser hvert 60s
+  // Callback er stabil: setOrgState fra useState ændrer sig aldrig
+  const handlePermissionUpdate = useCallback(
+    (rolePerms: Record<string, RolePermission> | null, orgMembers: OrgMember[]) => {
+      setOrgState((prev) => ({ ...prev, rolePermissions: rolePerms, members: orgMembers }));
+    },
+    [setOrgState]
+  );
+
   usePermissionPoller({
     orgId: orgState.orgId,
-    onUpdate: useCallback(
-      (rolePerms, orgMembers) => {
-        setOrgState((prev) => ({
-          ...prev,
-          rolePermissions: rolePerms,
-          members: orgMembers,
-        }));
-      },
-      [setOrgState]
-    ),
+    onUpdate: handlePermissionUpdate,
   });
 
-  // refetchPermissions eksponeret i context
   const refetchPermissions = useCallback(async () => {
     if (!orgState.orgId) return;
     await refetchForOrg(orgState.orgId);
   }, [orgState.orgId, refetchForOrg]);
 
+  // useMemo: context-objektet får kun ny reference når indholdet reelt ændrer sig
+  const contextValue = useMemo(
+    () => ({ ...orgState, refetchPermissions }),
+    [orgState, refetchPermissions]
+  );
+
   if (loading) return <AppLoadingSkeleton />;
   if (error) return <AppErrorScreen message={error} />;
-
-  const contextValue = { ...orgState, refetchPermissions };
 
   return (
     <OrgContext.Provider value={contextValue}>
