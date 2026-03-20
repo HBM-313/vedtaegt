@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, createContext, useContext, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -8,64 +8,34 @@ import {
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   BarChart3, FileText, ClipboardCheck, FolderOpen, Settings, LogOut, Shield, User,
 } from "lucide-react";
 import { toast } from "sonner";
 
-export interface RolePermission {
-  kan_oprette_moeder: boolean;
-  kan_redigere_moeder: boolean;
-  kan_sende_til_godkendelse: boolean;
-  kan_godkende_referat: boolean;
-  kan_se_dokumenter: boolean;
-  kan_uploade_dokumenter: boolean;
-  kan_slette_dokumenter: boolean;
-  kan_lukke_andres_handlingspunkter: boolean;
-  kan_invitere_medlemmer: boolean;
-  kan_fjerne_medlemmer: boolean;
-  kan_aendre_roller: boolean;
-  kan_se_indstillinger: boolean;
-  kan_redigere_forening: boolean;
-  arver_formand_ved_fravaer: boolean;
-}
+// Context + typer
+import { OrgContext, useOrg } from "@/context/OrgContext";
+export type { RolePermission, OrgMember } from "@/context/OrgContext";
+export { useOrg };
 
-export interface OrgMember {
-  id: string;
-  role: string;
-  er_fravaerende: boolean;
-  name: string;
-}
+// Hooks
+import { useOrgLoader } from "@/hooks/useOrgLoader";
+import { usePermissionPoller } from "@/hooks/usePermissionPoller";
 
-interface OrgContextType {
-  orgId: string | null;
-  orgName: string | null;
-  memberId: string | null;
-  memberName: string | null;
-  memberRole: string | null;
-  userId: string | null;
-  rolePermissions: Record<string, RolePermission> | null;
-  members: OrgMember[] | null;
-  refetchPermissions: () => void;
-}
-
-const OrgContext = createContext<OrgContextType>({
-  orgId: null, orgName: null, memberId: null, memberName: null,
-  memberRole: null, userId: null, rolePermissions: null, members: null,
-  refetchPermissions: () => {},
-});
-
-export const useOrg = () => useContext(OrgContext);
-
+// ─────────────────────────────────────────────
+// Sidebar
+// ─────────────────────────────────────────────
 function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
   const { orgName, memberName, rolePermissions, memberRole } = useOrg();
 
-  const kanSeIndstillinger = rolePermissions && memberRole
-    ? rolePermissions[memberRole]?.kan_se_indstillinger ?? false
-    : false;
+  const kanSeIndstillinger =
+    rolePermissions && memberRole
+      ? (rolePermissions[memberRole]?.kan_se_indstillinger ?? false)
+      : false;
 
   const navItems = [
     { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
@@ -101,7 +71,11 @@ function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                    <NavLink
+                      to={item.url}
+                      className="hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
                       <item.icon className="h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </NavLink>
@@ -111,7 +85,11 @@ function AppSidebar() {
               {kanSeIndstillinger && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <NavLink to="/indstillinger" className="hover:bg-sidebar-accent" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                    <NavLink
+                      to="/indstillinger"
+                      className="hover:bg-sidebar-accent"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
                       <Settings className="h-4 w-4" />
                       {!collapsed && <span>Indstillinger</span>}
                     </NavLink>
@@ -126,7 +104,11 @@ function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         {!collapsed ? (
           <div className="space-y-2">
-            <NavLink to="/profil" className="flex items-center gap-2 text-xs text-sidebar-foreground hover:text-sidebar-primary transition-colors" activeClassName="text-sidebar-primary font-medium">
+            <NavLink
+              to="/profil"
+              className="flex items-center gap-2 text-xs text-sidebar-foreground hover:text-sidebar-primary transition-colors"
+              activeClassName="text-sidebar-primary font-medium"
+            >
               <User className="h-3.5 w-3.5" />
               <span className="truncate">{memberName || "Min profil"}</span>
             </NavLink>
@@ -151,224 +133,97 @@ function AppSidebar() {
   );
 }
 
+// ─────────────────────────────────────────────
+// Loading skeleton vist mens org hentes
+// ─────────────────────────────────────────────
+function AppLoadingSkeleton() {
+  return (
+    <div className="min-h-screen flex w-full">
+      <div className="w-16 border-r border-border" />
+      <div className="flex-1 flex flex-col">
+        <div className="h-12 border-b border-border" />
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-full max-w-md" />
+          <Skeleton className="h-4 w-full max-w-sm" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Fejlvisning
+// ─────────────────────────────────────────────
+function AppErrorScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4 max-w-sm">
+        <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
+        <p className="text-sm text-muted-foreground">{message}</p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={async () => {
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+          }}
+        >
+          <LogOut className="h-4 w-4 mr-1" /> Log ud
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// AppLayout
+// ─────────────────────────────────────────────
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
-  const navigate = useNavigate();
-  const [orgData, setOrgData] = useState<OrgContextType>({
-    orgId: null, orgName: null, memberId: null, memberName: null,
-    memberRole: null, userId: null, rolePermissions: null, members: null,
-    refetchPermissions: () => {},
+  const {
+    orgState,
+    loading,
+    error,
+    load,
+    updatePermissionsAndMembers,
+    refetchForOrg,
+    setOrgState,
+  } = useOrgLoader();
+
+  // Indlæs org ved mount
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Poll tilladelser hvert 60s
+  usePermissionPoller({
+    orgId: orgState.orgId,
+    onUpdate: useCallback(
+      (rolePerms, orgMembers) => {
+        setOrgState((prev) => ({
+          ...prev,
+          rolePermissions: rolePerms,
+          members: orgMembers,
+        }));
+      },
+      [setOrgState]
+    ),
   });
-  const [contextError, setContextError] = useState<string | null>(null);
-  const permVersionRef = useRef<number | null>(null);
 
-  const fetchPermissions = useCallback(async (orgId: string) => {
-    const { data } = await supabase
-      .from("role_permissions")
-      .select("*")
-      .eq("org_id", orgId);
-
-    if (data) {
-      const map: Record<string, RolePermission> = {};
-      data.forEach((row: any) => {
-        map[row.role] = {
-          kan_oprette_moeder: row.kan_oprette_moeder,
-          kan_redigere_moeder: row.kan_redigere_moeder,
-          kan_sende_til_godkendelse: row.kan_sende_til_godkendelse,
-          kan_godkende_referat: row.kan_godkende_referat,
-          kan_se_dokumenter: row.kan_se_dokumenter,
-          kan_uploade_dokumenter: row.kan_uploade_dokumenter,
-          kan_slette_dokumenter: row.kan_slette_dokumenter,
-          kan_lukke_andres_handlingspunkter: row.kan_lukke_andres_handlingspunkter,
-          kan_invitere_medlemmer: row.kan_invitere_medlemmer,
-          kan_fjerne_medlemmer: row.kan_fjerne_medlemmer,
-          kan_aendre_roller: row.kan_aendre_roller,
-          kan_se_indstillinger: row.kan_se_indstillinger,
-          kan_redigere_forening: row.kan_redigere_forening,
-          arver_formand_ved_fravaer: row.arver_formand_ved_fravaer,
-        };
-      });
-      return map;
-    }
-    return null;
-  }, []);
-
-  const fetchMembers = useCallback(async (orgId: string): Promise<OrgMember[]> => {
-    const { data } = await supabase
-      .from("members")
-      .select("id, role, name, er_fravaerende")
-      .eq("org_id", orgId);
-    return (data as any[]) || [];
-  }, []);
-
-  useEffect(() => {
-    const loadOrg = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Handle pending signup — try localStorage first, then user_metadata
-      let pendingData: any = null;
-
-      const pendingRaw = localStorage.getItem("vedtaegt_pending_signup");
-      if (pendingRaw) {
-        try {
-          const parsed = JSON.parse(pendingRaw);
-          if (parsed.userId === user.id || parsed.email === user.email) {
-            pendingData = parsed;
-          }
-        } catch {
-          localStorage.removeItem("vedtaegt_pending_signup");
-        }
-      }
-
-      // Fallback: check user_metadata if localStorage empty
-      if (!pendingData && user.user_metadata?.pending_signup) {
-        pendingData = user.user_metadata.pending_signup;
-      }
-
-      if (pendingData) {
-        try {
-          const { data: existingMember } = await supabase
-            .from("members").select("id").eq("user_id", user.id).maybeSingle();
-
-          if (!existingMember) {
-            const { data: org, error: orgError } = await supabase
-              .from("organizations")
-              .insert({
-                name: pendingData.orgName, cvr: pendingData.cvr, plan: "free",
-                dpa_accepted_at: new Date().toISOString(), dpa_version: "1.0",
-                adresse: pendingData.orgAdresse || null,
-                postnummer: pendingData.orgPostnummer || null,
-                by: pendingData.orgBy || null,
-                telefon: pendingData.orgTelefon || null,
-                kontakt_email: pendingData.orgEmail || null,
-              } as any)
-              .select().single();
-
-            if (orgError) {
-              console.error("Error creating org during signup completion:", orgError);
-              setContextError("Kunne ikke oprette foreningen. Prøv at logge ud og ind igen, eller kontakt support.");
-              return;
-            }
-
-            if (org) {
-              await supabase.rpc("insert_default_permissions", { p_org_id: org.id });
-              const now = new Date().toISOString();
-              const { error: memberError } = await supabase.from("members").insert({
-                org_id: org.id, user_id: user.id, role: "formand",
-                name: pendingData.name, email: pendingData.email || user.email,
-                joined_at: now, marketing_consent: pendingData.marketingConsent || false,
-                marketing_consent_at: pendingData.marketingConsent ? now : null,
-                telefon: pendingData.telefon || null,
-                adresse: pendingData.adresse || null,
-                postnummer: pendingData.postnummer || null,
-                by: pendingData.by || null,
-                foedselsdato: pendingData.foedselsdato || null,
-                email_bekraeftet: true,
-              } as any);
-
-              if (memberError) {
-                console.error("Error creating member during signup completion:", memberError);
-              }
-            }
-          }
-          localStorage.removeItem("vedtaegt_pending_signup");
-          // Clear user_metadata pending_signup
-          await supabase.auth.updateUser({ data: { pending_signup: null } });
-        } catch (err) {
-          console.error("Error processing pending signup:", err);
-          localStorage.removeItem("vedtaegt_pending_signup");
-          setContextError("Der opstod en fejl under oprettelsen af din forening. Prøv at logge ud og ind igen.");
-          return;
-        }
-      }
-
-      const { data: member } = await supabase
-        .from("members")
-        .select("id, org_id, name, role, organizations(name)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (member) {
-        const org = member.organizations as unknown as { name: string } | null;
-        const orgId = member.org_id!;
-        const [rolePerms, orgMembers] = await Promise.all([
-          fetchPermissions(orgId),
-          fetchMembers(orgId),
-        ]);
-
-        // Get initial permission_version
-        const { data: orgRow } = await supabase
-          .from("organizations").select("permission_version").eq("id", orgId).single();
-        permVersionRef.current = (orgRow as any)?.permission_version ?? 1;
-
-        setOrgData({
-          orgId, orgName: org?.name ?? null,
-          memberId: member.id, memberName: member.name,
-          memberRole: member.role, userId: user.id,
-          rolePermissions: rolePerms, members: orgMembers,
-          refetchPermissions: () => {},
-        });
-      } else {
-        setContextError("Din brugerprofil kunne ikke findes. Prøv at logge ud og ind igen.");
-      }
-    };
-    loadOrg();
-  }, [fetchPermissions, fetchMembers]);
-
-  // Poll permission_version every 60s
-  useEffect(() => {
-    if (!orgData.orgId) return;
-    const orgId = orgData.orgId;
-
-    const interval = setInterval(async () => {
-      const { data } = await supabase
-        .from("organizations").select("permission_version").eq("id", orgId).single();
-      const newVersion = (data as any)?.permission_version ?? 1;
-
-      if (permVersionRef.current !== null && newVersion !== permVersionRef.current) {
-        permVersionRef.current = newVersion;
-        const [rolePerms, orgMembers] = await Promise.all([
-          fetchPermissions(orgId),
-          fetchMembers(orgId),
-        ]);
-        toast.info("Dine tilladelser er blevet opdateret af formanden.");
-        setOrgData((prev) => ({ ...prev, rolePermissions: rolePerms, members: orgMembers }));
-      }
-    }, 60_000);
-
-    return () => clearInterval(interval);
-  }, [orgData.orgId, fetchPermissions, fetchMembers]);
-
-  // Expose refetchPermissions
+  // refetchPermissions eksponeret i context
   const refetchPermissions = useCallback(async () => {
-    if (!orgData.orgId) return;
-    const [rolePerms, orgMembers] = await Promise.all([
-      fetchPermissions(orgData.orgId),
-      fetchMembers(orgData.orgId),
-    ]);
-    setOrgData((prev) => ({ ...prev, rolePermissions: rolePerms, members: orgMembers }));
-  }, [orgData.orgId, fetchPermissions, fetchMembers]);
+    if (!orgState.orgId) return;
+    await refetchForOrg(orgState.orgId);
+  }, [orgState.orgId, refetchForOrg]);
 
-  const contextValue = { ...orgData, refetchPermissions };
+  if (loading) return <AppLoadingSkeleton />;
+  if (error) return <AppErrorScreen message={error} />;
 
-  if (contextError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4 max-w-sm">
-          <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
-          <p className="text-sm text-muted-foreground">{contextError}</p>
-          <Button size="sm" variant="outline" onClick={async () => { await supabase.auth.signOut(); window.location.href = "/login"; }}>
-            <LogOut className="h-4 w-4 mr-1" /> Log ud
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const contextValue = { ...orgState, refetchPermissions };
 
   return (
     <OrgContext.Provider value={contextValue}>
