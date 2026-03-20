@@ -104,7 +104,8 @@ const Documents = () => {
     loadCats();
   }, [orgId]);
 
-  const getCategoryMeta = (cat: string | null) => categories.find((c) => c.value === cat) ?? categories[categories.length - 1] ?? FALLBACK_CATEGORIES[4];
+  const getCategoryMeta = (cat: string | null): CategoryMeta | null =>
+    cat ? (categories.find((c) => c.value === cat) ?? null) : null;
 
   const fetchDocs = useCallback(async () => {
     if (!orgId) return;
@@ -171,7 +172,7 @@ const Documents = () => {
     const { error: storageError } = await supabase.storage.from("documents").upload(storagePath, file);
     if (storageError) { toast.error("Upload fejlede: " + storageError.message); setUploading(false); return; }
 
-    const retention = getCategoryMeta(category).retention;
+    const retention = getCategoryMeta(category)?.retention ?? 3;
     const { error: dbError } = await supabase.from("documents").insert({
       org_id: orgId, name: docName || file.name, category, storage_path: storagePath,
       file_size_bytes: file.size, file_type: file.type, uploaded_by: memberId, retention_years: retention,
@@ -219,7 +220,7 @@ const Documents = () => {
   const filterTabs = [
     { value: "all", label: "Alle" },
     ...categories.map((c) => ({ value: c.value, label: c.label })),
-    { value: "fra_moeder", label: "Fra møder" },
+    // "Fra møder" er nu en standardkategori i DB — tilføjes ikke hardkodet
   ];
 
   const ACCEPTED_TYPES = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx,.doc,.xls";
@@ -290,7 +291,13 @@ const Documents = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline" className={meta.color}>{meta.label}</Badge></TableCell>
+                    <TableCell>
+                      {meta ? (
+                        <Badge variant="outline" className={meta.color}>{meta.label}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-transparent">Ingen</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{doc.uploader_name || "—"}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{doc.created_at ? formatShortDate(doc.created_at) : "—"}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground tabular-nums">{formatBytes(doc.file_size_bytes)}</TableCell>
@@ -377,7 +384,7 @@ const Documents = () => {
                   }
                 </SelectContent>
               </Select>
-              {category && <p className="text-xs text-muted-foreground">Opbevaringsperiode: {getCategoryMeta(category).retention} år</p>}
+              {category && getCategoryMeta(category) && <p className="text-xs text-muted-foreground">Opbevaringsperiode: {getCategoryMeta(category)!.retention} år</p>}
             </div>
           </div>
           <DialogFooter>
@@ -420,9 +427,9 @@ const Documents = () => {
                   ))}
               </SelectContent>
             </Select>
-            {newCat && (
+            {newCat && getCategoryMeta(newCat) && (
               <p className="text-xs text-muted-foreground">
-                Opbevaringsperiode: {getCategoryMeta(newCat).retention} år
+                Opbevaringsperiode: {getCategoryMeta(newCat)!.retention} år
               </p>
             )}
           </div>
