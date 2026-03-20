@@ -267,33 +267,6 @@ const Signup = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="orgName" className="text-xs">Foreningens navn</Label>
-              <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="F.eks. Grundejerforeningen Solbakken" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="orgAdresse" className="text-xs">Foreningens adresse</Label>
-              <Input id="orgAdresse" value={orgAdresse} onChange={(e) => setOrgAdresse(e.target.value)} placeholder="Gadenavn 123" required />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="orgPostnummer" className="text-xs">Postnummer</Label>
-                <Input id="orgPostnummer" value={orgPostnummer} onChange={(e) => setOrgPostnummer(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="8000" required maxLength={4} inputMode="numeric" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="orgBy" className="text-xs">By</Label>
-                <Input id="orgBy" value={orgBy} onChange={(e) => setOrgBy(e.target.value)} placeholder="Aarhus C" required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="orgTelefon" className="text-xs">Foreningens telefonnummer</Label>
-              <Input id="orgTelefon" value={orgTelefon} onChange={(e) => setOrgTelefon(e.target.value)} placeholder="+45 12 34 56 78" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="orgEmail" className="text-xs">Foreningens e-mailadresse</Label>
-              <Input id="orgEmail" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} placeholder="bestyrelse@forening.dk" required />
-              <p className="text-xs text-muted-foreground">Den officielle kontaktmail for foreningen — ikke din personlige e-mail</p>
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="cvr" className="text-xs">CVR-nummer <span className="text-muted-foreground">(valgfrit)</span></Label>
               <div className="flex gap-2">
                 <Input
@@ -322,6 +295,34 @@ const Signup = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Indtast CVR og tryk "Hent" for at auto-udfylde foreningsoplysninger.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="orgName" className="text-xs">Foreningens navn</Label>
+              <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="F.eks. Grundejerforeningen Solbakken" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="orgAdresse" className="text-xs">Foreningens adresse</Label>
+              <Input id="orgAdresse" value={orgAdresse} onChange={(e) => setOrgAdresse(e.target.value)} placeholder="Gadenavn 123" required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="orgPostnummer" className="text-xs">Postnummer</Label>
+                <Input id="orgPostnummer" value={orgPostnummer} onChange={(e) => setOrgPostnummer(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="8000" required maxLength={4} inputMode="numeric" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="orgBy" className="text-xs">By</Label>
+                <Input id="orgBy" value={orgBy} onChange={(e) => setOrgBy(e.target.value)} placeholder="Aarhus C" required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="orgTelefon" className="text-xs">Foreningens telefonnummer</Label>
+              <Input id="orgTelefon" value={orgTelefon} onChange={(e) => setOrgTelefon(e.target.value)} placeholder="+45 12 34 56 78" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="orgEmail" className="text-xs">Foreningens e-mailadresse</Label>
+              <Input id="orgEmail" type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} placeholder="bestyrelse@forening.dk" required />
+              <p className="text-xs text-muted-foreground">Den officielle kontaktmail for foreningen — ikke din personlige e-mail</p>
             </div>
 
             <Button type="submit" className="w-full" size="sm">Fortsæt</Button>
