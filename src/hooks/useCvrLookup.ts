@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface CvrData {
   navn: string;
@@ -9,36 +10,20 @@ export interface CvrData {
   email: string | null;
 }
 
-// cvrapi.dk — gratis CVR-opslag, ingen nøgle krævet til basisdata
-const CVR_URL = "https://cvrapi.dk/api";
-
+// CVR-opslag via Supabase Edge Function (server-side) for at undgå
+// CORS og browser User-Agent begrænsninger ved direkte kald til cvrapi.dk
 export function useCvrLookup() {
   const lookup = useCallback(async (cvr: string): Promise<CvrData | null> => {
     if (!/^\d{8}$/.test(cvr)) return null;
 
     try {
-      const res = await fetch(
-        `${CVR_URL}?search=${cvr}&country=dk`,
-        {
-          headers: {
-            // cvrapi.dk kræver en User-Agent
-            "User-Agent": "Vedtaegt/1.0 (vedtaegt.lovable.app)",
-          },
-        }
-      );
-      if (!res.ok) return null;
-      const data = await res.json();
+      const { data, error } = await supabase.functions.invoke("cvr-lookup", {
+        body: { cvr },
+      });
 
-      if (data.error) return null;
+      if (error || !data || data.error) return null;
 
-      return {
-        navn: data.name || "",
-        adresse: data.address || null,
-        postnummer: data.zipcode ? String(data.zipcode) : null,
-        by: data.city || null,
-        telefon: data.phone || null,
-        email: data.email || null,
-      };
+      return data as CvrData;
     } catch {
       return null;
     }
