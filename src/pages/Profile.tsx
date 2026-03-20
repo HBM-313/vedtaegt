@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User } from "lucide-react";
 import { toast } from "sonner";
+import { useDawaPostnummer } from "@/hooks/useDawaPostnummer";
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
   formand: "bg-blue-900 text-blue-50 border-blue-800",
@@ -26,6 +27,7 @@ const Profile = () => {
   const perms = usePermissions();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { lookup: dawaLookup } = useDawaPostnummer();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -60,6 +62,15 @@ const Profile = () => {
   }, [memberId]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  // Auto-udfyld by fra postnummer via DAWA
+  useEffect(() => {
+    if (postnummer.length === 4) {
+      dawaLookup(postnummer).then((navn) => {
+        if (navn) setBy(navn);
+      });
+    }
+  }, [postnummer, dawaLookup]);
 
   const handleSave = async () => {
     if (!memberId) return;

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getRoleLabel } from "@/lib/roles";
 import { Shield, AlertTriangle, Mail, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useDawaPostnummer } from "@/hooks/useDawaPostnummer";
 
 const ROLE_BADGE_STYLES: Record<string, string> = {
   formand: "bg-blue-900 text-blue-50 border-blue-800",
@@ -35,6 +36,7 @@ const InvitationAccept = () => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [resending, setResending] = useState(false);
+  const { lookup: dawaLookup } = useDawaPostnummer();
 
   // Form fields
   const [name, setName] = useState("");
@@ -46,6 +48,15 @@ const InvitationAccept = () => {
   const [postnummer, setPostnummer] = useState("");
   const [by_, setBy] = useState("");
   const [dpaAccepted, setDpaAccepted] = useState(false);
+
+  // Auto-udfyld by fra postnummer via DAWA
+  useEffect(() => {
+    if (postnummer.length === 4) {
+      dawaLookup(postnummer).then((navn) => {
+        if (navn) setBy(navn);
+      });
+    }
+  }, [postnummer, dawaLookup]);
 
   useEffect(() => {
     const loadInvitation = async () => {

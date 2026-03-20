@@ -4,30 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Shield, ArrowLeft, Info, Mail, RefreshCw } from "lucide-react";
+import { Shield, ArrowLeft, Info, Mail, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
-
-const POSTNUMMER_MAP: Record<string, string> = {
-  "1000": "København K", "1500": "København V", "2000": "Frederiksberg",
-  "2100": "København Ø", "2200": "København N", "2300": "København S",
-  "2400": "København NV", "2500": "Valby", "2600": "Glostrup",
-  "2700": "Brønshøj", "2800": "Kongens Lyngby", "2900": "Hellerup",
-  "3000": "Helsingør", "3400": "Hillerød", "3600": "Frederikssund",
-  "4000": "Roskilde", "4200": "Slagelse", "4600": "Køge",
-  "5000": "Odense C", "5200": "Odense V", "5700": "Svendborg",
-  "6000": "Kolding", "6400": "Sønderborg", "6700": "Esbjerg",
-  "7000": "Fredericia", "7100": "Vejle", "7400": "Herning",
-  "8000": "Aarhus C", "8200": "Aarhus N", "8600": "Silkeborg",
-  "8700": "Horsens", "9000": "Aalborg", "9200": "Aalborg SV",
-  "9400": "Nørresundby", "9800": "Hjørring",
-};
+import { useDawaPostnummer } from "@/hooks/useDawaPostnummer";
+import { useCvrLookup } from "@/hooks/useCvrLookup";
 
 const Signup = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [cvrLoading, setCvrLoading] = useState(false);
+  const { lookup: dawaLookup } = useDawaPostnummer();
+  const { lookup: cvrLookup } = useCvrLookup();
 
   // Step 1 — Forening
   const [orgName, setOrgName] = useState("");
@@ -52,18 +42,49 @@ const Signup = () => {
   const [dpaAccepted, setDpaAccepted] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
 
-  // Auto-fill by from postnummer
+  // Auto-udfyld by fra postnummer via DAWA
   useEffect(() => {
-    if (orgPostnummer.length === 4 && POSTNUMMER_MAP[orgPostnummer]) {
-      setOrgBy(POSTNUMMER_MAP[orgPostnummer]);
+    if (orgPostnummer.length === 4) {
+      dawaLookup(orgPostnummer).then((navn) => {
+        if (navn) setOrgBy(navn);
+      });
     }
-  }, [orgPostnummer]);
+  }, [orgPostnummer, dawaLookup]);
 
   useEffect(() => {
-    if (postnummer.length === 4 && POSTNUMMER_MAP[postnummer]) {
-      setBy(POSTNUMMER_MAP[postnummer]);
+    if (postnummer.length === 4) {
+      dawaLookup(postnummer).then((navn) => {
+        if (navn) setBy(navn);
+      });
     }
-  }, [postnummer]);
+  }, [postnummer, dawaLookup]);
+
+  // CVR-opslag: auto-udfyld foreningsinfo
+  const handleCvrLookup = async () => {
+    if (!/^\d{8}$/.test(cvr)) {
+      toast.error("Indtast et gyldigt 8-cifret CVR-nummer først.");
+      return;
+    }
+    setCvrLoading(true);
+    try {
+      const data = await cvrLookup(cvr);
+      if (!data) {
+        toast.error("CVR-nummeret blev ikke fundet. Tjek nummeret og prøv igen.");
+        return;
+      }
+      if (data.navn) setOrgName(data.navn);
+      if (data.adresse) setOrgAdresse(data.adresse);
+      if (data.postnummer) setOrgPostnummer(data.postnummer);
+      if (data.by) setOrgBy(data.by);
+      if (data.telefon) setOrgTelefon(data.telefon);
+      if (data.email) setOrgEmail(data.email);
+      toast.success("Foreningsoplysninger hentet fra CVR.");
+    } catch {
+      toast.error("Kunne ikke hente CVR-oplysninger. Udfyld felterne manuelt.");
+    } finally {
+      setCvrLoading(false);
+    }
+  };
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,7 +295,33 @@ const Signup = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="cvr" className="text-xs">CVR-nummer <span className="text-muted-foreground">(valgfrit)</span></Label>
-              <Input id="cvr" value={cvr} onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="12345678" maxLength={8} inputMode="numeric" />
+              <div className="flex gap-2">
+                <Input
+                  id="cvr"
+                  value={cvr}
+                  onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                  placeholder="12345678"
+                  maxLength={8}
+                  inputMode="numeric"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCvrLookup}
+                  disabled={cvrLoading || cvr.length !== 8}
+                  className="shrink-0"
+                >
+                  {cvrLoading ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Search className="h-3.5 w-3.5" />
+                  )}
+                  <span className="ml-1">Hent</span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Indtast CVR og tryk "Hent" for at auto-udfylde foreningsoplysninger.</p>
             </div>
 
             <Button type="submit" className="w-full" size="sm">Fortsæt</Button>
