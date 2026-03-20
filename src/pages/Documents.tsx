@@ -25,7 +25,7 @@ import {
   Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
-import { Upload, Search, Download, Trash2, Lock, Plus, FileText, Eye } from "lucide-react";
+import { Upload, Search, Download, Trash2, Lock, Plus, FileText, Eye, FolderPen } from "lucide-react";
 import { toast } from "sonner";
 import { Navigate } from "react-router-dom";
 import DocumentPreviewModal from "@/components/documents/DocumentPreviewModal";
@@ -71,6 +71,8 @@ const Documents = () => {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteDoc, setDeleteDoc] = useState<Doc | null>(null);
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
+  const [changeCatDoc, setChangeCatDoc] = useState<Doc | null>(null);
+  const [newCat, setNewCat] = useState<string>("");
 
   const [file, setFile] = useState<File | null>(null);
   const [docName, setDocName] = useState("");
@@ -190,6 +192,21 @@ const Documents = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleChangeCategory = async () => {
+    if (!changeCatDoc || !newCat || !orgId) return;
+    const { error } = await supabase
+      .from("documents")
+      .update({ category: newCat })
+      .eq("id", changeCatDoc.id);
+    if (error) { toast.error("Kunne ikke ændre kategori."); return; }
+    await logAuditEvent("document.category_changed", "document", changeCatDoc.id,
+      { from: changeCatDoc.category, to: newCat });
+    toast.success("Kategori opdateret.");
+    setChangeCatDoc(null);
+    setNewCat("");
+    fetchDocs();
+  };
+
   const handleDelete = async () => {
     if (!deleteDoc) return;
     if (!perms.kanSletteDokumenter) { toast.error("Du har ikke tilladelse til at slette dokumenter."); setDeleteDoc(null); return; }
@@ -283,6 +300,16 @@ const Documents = () => {
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDownload(doc)}><Download className="h-4 w-4" /></Button>
+                        {perms.kanRedigereMoeder && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => { setChangeCatDoc(doc); setNewCat(doc.category || ""); }}>
+                                <FolderPen className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Skift kategori</TooltipContent>
+                          </Tooltip>
+                        )}
                         {isRegnskab ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -343,7 +370,12 @@ const Documents = () => {
               <Label>Kategori</Label>
               <Select value={category} onValueChange={(v) => setCategory(v)}>
                 <SelectTrigger><SelectValue placeholder="Vælg kategori" /></SelectTrigger>
-                <SelectContent>{categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {categories
+                    .filter((c) => c.value !== "fra_moeder")
+                    .map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)
+                  }
+                </SelectContent>
               </Select>
               {category && <p className="text-xs text-muted-foreground">Opbevaringsperiode: {getCategoryMeta(category).retention} år</p>}
             </div>
@@ -366,6 +398,42 @@ const Documents = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Skift kategori dialog */}
+      <Dialog open={!!changeCatDoc} onOpenChange={(open) => { if (!open) { setChangeCatDoc(null); setNewCat(""); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Skift kategori</DialogTitle>
+            <DialogDescription className="text-xs truncate">{changeCatDoc?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label className="text-xs">Ny kategori</Label>
+            <Select value={newCat} onValueChange={setNewCat}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vælg kategori..." />
+              </SelectTrigger>
+              <SelectContent>
+                {categories
+                  .filter((c) => c.value !== "fra_moeder")
+                  .map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            {newCat && (
+              <p className="text-xs text-muted-foreground">
+                Opbevaringsperiode: {getCategoryMeta(newCat).retention} år
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setChangeCatDoc(null); setNewCat(""); }}>Annullér</Button>
+            <Button onClick={handleChangeCategory} disabled={!newCat || newCat === changeCatDoc?.category}>
+              Gem kategori
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -19,18 +19,27 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle, Users } from "lucide-react";
+import { Building2, CreditCard, Shield, Trash2, Download, AlertTriangle, Users, Search, RefreshCw } from "lucide-react";
+import { useCvrLookup } from "@/hooks/useCvrLookup";
 import { toast } from "sonner";
 
 interface Org {
   id: string; name: string; cvr: string | null; plan: string;
   subscription_status: string | null; dpa_accepted_at: string | null;
   dpa_version: string | null; deletion_requested_at: string | null;
+  adresse: string | null; postnummer: string | null; by: string | null;
+  telefon: string | null; kontakt_email: string | null;
+  max_bestyrelsesmedlemmer: number | null; max_suppleanter: number | null;
 }
+
+const PLAN_LIMITS = {
+  free:     { meetings: 3,   members: 5,   storageMb: 100,  label: "Gratis",   memberLabel: "5 medlemmer" },
+  forening: { meetings: 999, members: 30,  storageMb: 1000, label: "Forening", memberLabel: "30 medlemmer" },
+  paraply:  { meetings: 999, members: 200, storageMb: 5000, label: "Paraply",  memberLabel: "200 medlemmer" },
+};
 
 interface UsageData { meetingsThisYear: number; membersCount: number; storageMb: number; }
 
-const PLAN_LIMITS = { free: { meetings: 3, members: 5, storageMb: 100 } };
 
 const planBadge = (plan: string) => {
   switch (plan) {
@@ -51,6 +60,11 @@ const OrgSettings = () => {
 
   const [name, setName] = useState("");
   const [cvr, setCvr] = useState("");
+  const [adresse, setAdresse] = useState("");
+  const [postnummer, setPostnummer] = useState("");
+  const [by, setBy] = useState("");
+  const [telefon, setTelefon] = useState("");
+  const [kontaktEmail, setKontaktEmail] = useState("");
   const [maxBestyrelse, setMaxBestyrelse] = useState(5);
   const [maxSuppleanter, setMaxSuppleanter] = useState(2);
   const [savingBoard, setSavingBoard] = useState(false);
@@ -59,6 +73,8 @@ const OrgSettings = () => {
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
   const [confirmName, setConfirmName] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [cvrLoading, setCvrLoading] = useState(false);
+  const { lookup: cvrLookup } = useCvrLookup();
 
   const fetchData = useCallback(async () => {
     if (!orgId) return;
@@ -71,10 +87,15 @@ const OrgSettings = () => {
     ]);
 
     if (orgRes.data) {
-      const o = orgRes.data;
+      const o = orgRes.data as Org;
       setOrg(o); setName(o.name); setCvr(o.cvr || "");
-      setMaxBestyrelse((o as any).max_bestyrelsesmedlemmer ?? 5);
-      setMaxSuppleanter((o as any).max_suppleanter ?? 2);
+      setAdresse(o.adresse || "");
+      setPostnummer(o.postnummer || "");
+      setBy(o.by || "");
+      setTelefon(o.telefon || "");
+      setKontaktEmail(o.kontakt_email || "");
+      setMaxBestyrelse(o.max_bestyrelsesmedlemmer ?? 5);
+      setMaxSuppleanter(o.max_suppleanter ?? 2);
     }
     if (membersRes.data) {
       const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; }, {});
@@ -92,14 +113,37 @@ const OrgSettings = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const handleCvrLookup = async () => {
+    if (!/^\d{8}$/.test(cvr)) { toast.error("Indtast et gyldigt 8-cifret CVR-nummer."); return; }
+    setCvrLoading(true);
+    try {
+      const data = await cvrLookup(cvr);
+      if (!data) { toast.error("CVR-nummeret blev ikke fundet."); return; }
+      if (data.navn) setName(data.navn);
+      if (data.adresse) setAdresse(data.adresse);
+      if (data.postnummer) setPostnummer(data.postnummer);
+      if (data.by) setBy(data.by);
+      if (data.telefon) setTelefon(data.telefon);
+      if (data.email) setKontaktEmail(data.email);
+      toast.success("Foreningsoplysninger hentet fra CVR.");
+    } catch { toast.error("Kunne ikke hente CVR-oplysninger."); }
+    finally { setCvrLoading(false); }
+  };
+
   const handleSave = async () => {
     if (!orgId) return;
     if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse til at redigere foreningsoplysninger."); return; }
     setSaving(true);
-    const updates: Record<string, string | null> = { name: name.trim() };
-    updates.cvr = cvr.trim() || null;
-    const { error } = await supabase.from("organizations").update(updates).eq("id", orgId);
-    if (error) toast.error("Kunne ikke gemme ændringer."); else toast.success("Indstillinger gemt.");
+    const { error } = await supabase.from("organizations").update({
+      name: name.trim(),
+      cvr: cvr.trim() || null,
+      adresse: adresse.trim() || null,
+      postnummer: postnummer.trim() || null,
+      by: by.trim() || null,
+      telefon: telefon.trim() || null,
+      kontakt_email: kontaktEmail.trim() || null,
+    }).eq("id", orgId);
+    if (error) toast.error("Kunne ikke gemme ændringer."); else toast.success("Stamoplysninger gemt.");
     setSaving(false);
   };
 
@@ -107,7 +151,7 @@ const OrgSettings = () => {
     if (!orgId) return;
     if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse."); return; }
     setSavingBoard(true);
-    const { error } = await supabase.from("organizations").update({ max_bestyrelsesmedlemmer: maxBestyrelse, max_suppleanter: maxSuppleanter } as any).eq("id", orgId);
+    const { error } = await supabase.from("organizations").update({ max_bestyrelsesmedlemmer: maxBestyrelse, max_suppleanter: maxSuppleanter }).eq("id", orgId);
     if (error) toast.error("Kunne ikke gemme bestyrelsesstruktur."); else toast.success("Bestyrelsesstruktur gemt.");
     setSavingBoard(false);
   };
@@ -201,15 +245,54 @@ const OrgSettings = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="org-name">Foreningens navn</Label>
+            <Label htmlFor="org-cvr" className="text-xs">CVR-nummer <span className="text-muted-foreground">(valgfrit)</span></Label>
+            <div className="flex gap-2">
+              <Input
+                id="org-cvr"
+                value={cvr}
+                onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                placeholder="12345678"
+                maxLength={8}
+                disabled={!perms.kanRedigereForening}
+                className="flex-1"
+              />
+              {perms.kanRedigereForening && (
+                <Button type="button" variant="outline" size="sm" onClick={handleCvrLookup} disabled={cvrLoading || cvr.length !== 8} className="shrink-0">
+                  {cvrLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                  <span className="ml-1">Hent</span>
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Indtast CVR og tryk "Hent" for at auto-udfylde oplysninger.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="org-name" className="text-xs">Foreningens navn</Label>
             <Input id="org-name" value={name} onChange={(e) => setName(e.target.value)} disabled={!perms.kanRedigereForening} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-cvr">CVR-nummer (valgfrit)</Label>
-            <Input id="org-cvr" value={cvr} onChange={(e) => setCvr(e.target.value.replace(/\D/g, "").slice(0, 8))} placeholder="12345678" maxLength={8} disabled={!perms.kanRedigereForening} />
+            <Label htmlFor="org-adresse" className="text-xs">Adresse</Label>
+            <Input id="org-adresse" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Gadenavn 123" disabled={!perms.kanRedigereForening} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="org-postnummer" className="text-xs">Postnummer</Label>
+              <Input id="org-postnummer" value={postnummer} onChange={(e) => setPostnummer(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="8000" maxLength={4} disabled={!perms.kanRedigereForening} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="org-by" className="text-xs">By</Label>
+              <Input id="org-by" value={by} onChange={(e) => setBy(e.target.value)} placeholder="Aarhus C" disabled={!perms.kanRedigereForening} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="org-telefon" className="text-xs">Telefon</Label>
+            <Input id="org-telefon" value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="+45 12 34 56 78" disabled={!perms.kanRedigereForening} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="org-email" className="text-xs">Kontakt-e-mail</Label>
+            <Input id="org-email" type="email" value={kontaktEmail} onChange={(e) => setKontaktEmail(e.target.value)} placeholder="bestyrelse@forening.dk" disabled={!perms.kanRedigereForening} />
           </div>
           {perms.kanRedigereForening && (
-            <Button onClick={handleSave} disabled={saving || !name.trim()}>{saving ? "Gemmer..." : "Gem ændringer"}</Button>
+            <Button onClick={handleSave} disabled={saving || !name.trim()}>{saving ? "Gemmer..." : "Gem stamoplysninger"}</Button>
           )}
         </CardContent>
       </Card>
@@ -220,20 +303,30 @@ const OrgSettings = () => {
           <CardDescription className="flex items-center gap-2">Nuværende plan: {planBadge(org?.plan || "free")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {org?.plan === "free" && (
-            <>
-              <div className="space-y-3">
-                {usageBar(usage.meetingsThisYear, PLAN_LIMITS.free.meetings, "Møder dette år")}
-                {usageBar(usage.membersCount, PLAN_LIMITS.free.members, "Medlemmer")}
-                {usageBar(usage.storageMb, PLAN_LIMITS.free.storageMb, "Storage", " MB")}
-              </div>
-              <Separator />
-              <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>Opgrader til Forening — 99 kr/md</Button>
-            </>
-          )}
-          {org?.plan !== "free" && (
-            <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>Administrér abonnement</Button>
-          )}
+          {(() => {
+            const plan = (org?.plan || "free") as keyof typeof PLAN_LIMITS;
+            const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+            return (
+              <>
+                <div className="space-y-3">
+                  {usageBar(usage.meetingsThisYear, limits.meetings, "Møder dette år")}
+                  {usageBar(usage.membersCount, limits.members, "Medlemmer")}
+                  {usageBar(usage.storageMb, limits.storageMb, "Storage", " MB")}
+                </div>
+                <Separator />
+                {plan === "free" && (
+                  <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>
+                    Opgrader til Forening — 99 kr/md
+                  </Button>
+                )}
+                {plan !== "free" && (
+                  <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>
+                    Administrér abonnement
+                  </Button>
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 

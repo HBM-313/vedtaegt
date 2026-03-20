@@ -41,7 +41,48 @@ const CategoryManagement = () => {
       .select("*")
       .eq("org_id", orgId)
       .order("sort_order", { ascending: true });
-    setCategories((data || []) as Category[]);
+
+    const cats = (data || []) as Category[];
+
+    // Sikrer at standardkategorier altid eksisterer for denne org
+    // (kan mangle hvis org er oprettet før migrationerne)
+    const STANDARD_CATS = [
+      { name: "referat",    label: "Referat",    sort_order: 0, retention_years: 10, color: "bg-blue-100 text-blue-800 border-blue-200" },
+      { name: "regnskab",   label: "Regnskab",   sort_order: 1, retention_years: 5,  color: "bg-orange-100 text-orange-800 border-orange-200" },
+      { name: "vedtaegt",   label: "Vedtægt",    sort_order: 2, retention_years: 10, color: "bg-purple-100 text-purple-800 border-purple-200" },
+      { name: "forsikring", label: "Forsikring", sort_order: 3, retention_years: 10, color: "bg-green-100 text-green-800 border-green-200" },
+      { name: "other",      label: "Øvrige",     sort_order: 4, retention_years: 3,  color: "bg-muted text-muted-foreground border-border" },
+      { name: "fra_moeder", label: "Fra møder",  sort_order: 5, retention_years: 10, color: "bg-blue-50 text-blue-700 border-blue-100" },
+    ];
+
+    const missing = STANDARD_CATS.filter(
+      (s) => !cats.find((c) => c.name === s.name)
+    );
+
+    if (missing.length > 0) {
+      await supabase.from("document_categories").insert(
+        missing.map((m) => ({
+          org_id: orgId,
+          name: m.name,
+          label: m.label,
+          sort_order: m.sort_order,
+          er_aktiv: true,
+          er_laast: true,
+          retention_years: m.retention_years,
+          color: m.color,
+        }))
+      );
+      // Genindlæs efter insert
+      const { data: refreshed } = await supabase
+        .from("document_categories")
+        .select("*")
+        .eq("org_id", orgId)
+        .order("sort_order", { ascending: true });
+      setCategories((refreshed || []) as Category[]);
+    } else {
+      setCategories(cats);
+    }
+
     setLoading(false);
   }, [orgId]);
 
