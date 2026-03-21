@@ -86,6 +86,80 @@ export type Database = {
           },
         ]
       }
+      afstemninger: {
+        Row: {
+          agenda_item_id: string
+          created_at: string
+          er_hemmelig: boolean
+          id: string
+          ja_antal: number
+          meeting_id: string
+          nej_antal: number
+          noter: string | null
+          org_id: string
+          spoergsmaal: string
+          undladt_antal: number
+          updated_at: string
+        }
+        Insert: {
+          agenda_item_id: string
+          created_at?: string
+          er_hemmelig?: boolean
+          id?: string
+          ja_antal?: number
+          meeting_id: string
+          nej_antal?: number
+          noter?: string | null
+          org_id: string
+          spoergsmaal: string
+          undladt_antal?: number
+          updated_at?: string
+        }
+        Update: {
+          agenda_item_id?: string
+          created_at?: string
+          er_hemmelig?: boolean
+          id?: string
+          ja_antal?: number
+          meeting_id?: string
+          nej_antal?: number
+          noter?: string | null
+          org_id?: string
+          spoergsmaal?: string
+          undladt_antal?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "afstemninger_agenda_item_id_fkey"
+            columns: ["agenda_item_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "afstemninger_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "afstemninger_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "afstemninger_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agenda_items: {
         Row: {
           created_at: string | null
@@ -403,6 +477,7 @@ export type Database = {
           id: string
           location: string | null
           meeting_date: string | null
+          meeting_type: string
           org_id: string | null
           sendt_af: string | null
           status: string | null
@@ -420,6 +495,7 @@ export type Database = {
           id?: string
           location?: string | null
           meeting_date?: string | null
+          meeting_type?: string
           org_id?: string | null
           sendt_af?: string | null
           status?: string | null
@@ -437,6 +513,7 @@ export type Database = {
           id?: string
           location?: string | null
           meeting_date?: string | null
+          meeting_type?: string
           org_id?: string | null
           sendt_af?: string | null
           status?: string | null
@@ -790,6 +867,81 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "role_permissions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vedtaegt_versioner: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          er_gaeldende: boolean
+          godkendt_dato: string | null
+          id: string
+          moede_id: string | null
+          noter: string | null
+          oprettet_af: string | null
+          org_id: string
+          version_label: string
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          er_gaeldende?: boolean
+          godkendt_dato?: string | null
+          id?: string
+          moede_id?: string | null
+          noter?: string | null
+          oprettet_af?: string | null
+          org_id: string
+          version_label: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          er_gaeldende?: boolean
+          godkendt_dato?: string | null
+          id?: string
+          moede_id?: string | null
+          noter?: string | null
+          oprettet_af?: string | null
+          org_id?: string
+          version_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vedtaegt_versioner_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vedtaegt_versioner_moede_id_fkey"
+            columns: ["moede_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_approval_status"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "vedtaegt_versioner_moede_id_fkey"
+            columns: ["moede_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vedtaegt_versioner_oprettet_af_fkey"
+            columns: ["oprettet_af"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vedtaegt_versioner_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
