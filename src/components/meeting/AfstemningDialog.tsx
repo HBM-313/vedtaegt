@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 interface Afstemning {
   id: string;
+  agenda_item_id: string;
   spoergsmaal: string;
   ja_antal: number;
   nej_antal: number;
