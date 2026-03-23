@@ -105,7 +105,7 @@ const TeamSettings = () => {
     acc[m.role] = (acc[m.role] || 0) + 1; return acc;
   }, {});
 
-  const handleRoleChange = async (member: Member, newRole: string) => {
+  const handleRoleChange = async (member: Member, newRole: string): Promise<void> => {
     if (!perms.erFormand) { toast.error("Kun formanden kan ændre roller."); return; }
     await supabase.from("members").update({ role: newRole }).eq("id", member.id);
     await logAuditEvent("member.role_changed", "member", member.id, { from: member.role, to: newRole, email: member.email });
@@ -122,12 +122,18 @@ const TeamSettings = () => {
     setRemoveMember(null); fetchMembers();
   };
 
-  const validateInviteRole = (role: string): string | null => {
-    if (role === "naestformand" && (roleCounts["naestformand"] || 0) >= 1) return "Foreningen har allerede en næstformand.";
-    if (role === "kasserer" && (roleCounts["kasserer"] || 0) >= 1) return "Foreningen har allerede en kasserer.";
-    if (role === "bestyrelsesmedlem" && (roleCounts["bestyrelsesmedlem"] || 0) >= orgLimits.max_bestyrelsesmedlemmer)
+  const validateInviteRole = (role: string, excludeMemberId?: string): string | null => {
+    // Ved rolleændring: tæl ikke den pågældende members nuværende rolle
+    const excludedMember = excludeMemberId ? members.find((m) => m.id === excludeMemberId) : null;
+    const adjustedCounts = { ...roleCounts };
+    if (excludedMember) {
+      adjustedCounts[excludedMember.role] = Math.max(0, (adjustedCounts[excludedMember.role] || 0) - 1);
+    }
+    if (role === "naestformand" && (adjustedCounts["naestformand"] || 0) >= 1) return "Foreningen har allerede en næstformand.";
+    if (role === "kasserer" && (adjustedCounts["kasserer"] || 0) >= 1) return "Foreningen har allerede en kasserer.";
+    if (role === "bestyrelsesmedlem" && (adjustedCounts["bestyrelsesmedlem"] || 0) >= orgLimits.max_bestyrelsesmedlemmer)
       return `Maks. antal bestyrelsesmedlemmer er nået (${orgLimits.max_bestyrelsesmedlemmer}). Øg grænsen under Indstillinger → Bestyrelsesstruktur.`;
-    if (role === "suppleant" && (roleCounts["suppleant"] || 0) >= orgLimits.max_suppleanter)
+    if (role === "suppleant" && (adjustedCounts["suppleant"] || 0) >= orgLimits.max_suppleanter)
       return `Maks. antal suppleanter er nået (${orgLimits.max_suppleanter}).`;
     return null;
   };
@@ -401,7 +407,7 @@ const TeamSettings = () => {
             </DialogTitle>
           </DialogHeader>
           {detailMember && (
-            <div className="space-y-3 text-sm">
+            <div className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-y-2 gap-x-4">
                 <span className="text-muted-foreground">E-mail</span>
                 <span>{detailMember.email}</span>
@@ -418,6 +424,35 @@ const TeamSettings = () => {
                 <span className="text-muted-foreground">Tilsluttet</span>
                 <span>{detailMember.joined_at ? formatShortDate(detailMember.joined_at) : "—"}</span>
               </div>
+
+              {/* Rolleændring — kun formanden, ikke sig selv, ikke formand */}
+              {perms.erFormand && detailMember.id !== memberId && detailMember.role !== "formand" && (
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Ændr rolle</p>
+                  <Select
+                    value={detailMember.role}
+                    onValueChange={(newRole) => {
+                      const err = validateInviteRole(newRole, detailMember.id);
+                      if (err) { toast.error(err); return; }
+                      handleRoleChange(detailMember, newRole).then(() => {
+                        setDetailMember((prev) => prev ? { ...prev, role: newRole } : null);
+                      });
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVITABLE_ROLES.map((r) => (
+                        <SelectItem key={r} value={r}>{getRoleLabel(r)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Kun formanden kan ændre roller. Ændringen logges i aktivitetsloggen.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
