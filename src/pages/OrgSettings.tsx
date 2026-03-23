@@ -315,14 +315,28 @@ const OrgSettings = () => {
                 </div>
                 <Separator />
                 {plan === "free" && (
-                  <Button onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>
-                    Opgrader til Forening — 99 kr/md
-                  </Button>
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Opgrader til <strong>Forening</strong> (99 kr/md) for 30 medlemmer og 1 GB lagerplads,
+                      eller <strong>Paraply</strong> for større organisationer.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Kontakt os på{" "}
+                      <a href="mailto:kontakt@vedtaegt.dk" className="text-primary hover:underline">
+                        kontakt@vedtaegt.dk
+                      </a>{" "}
+                      for at opgradere.
+                    </p>
+                  </div>
                 )}
                 {plan !== "free" && (
-                  <Button variant="outline" onClick={() => toast.info("Stripe-integration er endnu ikke konfigureret.")}>
-                    Administrér abonnement
-                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    Kontakt os på{" "}
+                    <a href="mailto:kontakt@vedtaegt.dk" className="text-primary hover:underline">
+                      kontakt@vedtaegt.dk
+                    </a>{" "}
+                    for at ændre dit abonnement.
+                  </p>
                 )}
               </>
             );

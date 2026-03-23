@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, render } from "@react-pdf/renderer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { getRoleLabel } from "@/lib/roles";
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontSize: 10, fontFamily: "Helvetica" },
+  page: { padding: 40, paddingBottom: 60, fontSize: 10, fontFamily: "Helvetica" },
+  pageHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  pageHeaderTitle: { fontSize: 8, color: "#aaa" },
+  pageHeaderOrg: { fontSize: 8, color: "#aaa" },
   header: { marginBottom: 20 },
   orgName: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
   title: { fontSize: 18, fontWeight: "bold", marginBottom: 4 },
@@ -24,7 +27,7 @@ const styles = StyleSheet.create({
   approvalName: { fontSize: 9, fontWeight: "bold" },
   approvalDate: { fontSize: 8, color: "#666" },
   approvalSummary: { fontSize: 9, color: "#333", marginTop: 8, borderTopWidth: 1, borderTopColor: "#ddd", paddingTop: 6 },
-  footer: { position: "absolute", bottom: 30, left: 40, right: 40, fontSize: 7, color: "#999", borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 6 },
+  footer: { position: "absolute", bottom: 20, left: 40, right: 40, fontSize: 7, color: "#999", borderTopWidth: 1, borderTopColor: "#eee", paddingTop: 6, flexDirection: "row", justifyContent: "space-between" },
   separator: { borderBottomWidth: 1, borderBottomColor: "#ddd", marginBottom: 8, marginTop: 4 },
 });
 
@@ -154,6 +157,11 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
   const PdfDoc = () => (
     <Document>
       <Page size="A4" style={styles.page}>
+        {/* Gentagende sidetop på side 2+ */}
+        <View style={styles.pageHeader} fixed>
+          <Text style={styles.pageHeaderOrg}>{orgName}</Text>
+          <Text style={styles.pageHeaderTitle}>{meeting.title}</Text>
+        </View>
         <View style={styles.header}>
           <Text style={styles.orgName}>{orgName}</Text>
           <Text style={styles.title}>{meeting.title}</Text>
@@ -284,8 +292,9 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           </View>
         )}
 
-        <View style={styles.footer}>
+        <View style={styles.footer} fixed>
           <Text>Genereret af Vedtægt · vedtægt.dk</Text>
+          <Text render={({ pageNumber, totalPages }) => `Side ${pageNumber} af ${totalPages}`} />
         </View>
       </Page>
     </Document>

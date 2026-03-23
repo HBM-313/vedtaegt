@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Upload, FileText, CheckCircle, Plus, Trash2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Version {
   id: string;
@@ -51,6 +52,8 @@ const VedtaegterPage = () => {
   const [noter, setNoter] = useState("");
   const [fil, setFil] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [moedeId, setMoedeId] = useState<string>("");
+  const [availableMeetings, setAvailableMeetings] = useState<{ id: string; title: string; meeting_date: string | null }[]>([]);
 
   // Adgangsstyring:
   // Upload kræver kanUploadeDokumenter
@@ -176,6 +179,7 @@ const VedtaegterPage = () => {
           noter: noter.trim() || null,
           document_id: documentId,
           oprettet_af: memberId,
+          moede_id: moedeId || null,
         })
         .select()
         .single();
@@ -187,7 +191,7 @@ const VedtaegterPage = () => {
 
       toast.success("Ny vedtægtsversion oprettet.");
       setShowDialog(false);
-      setLabel(""); setGodkendtDato(""); setNoter(""); setFil(null);
+      setLabel(""); setGodkendtDato(""); setNoter(""); setFil(null); setMoedeId("");
       load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Kunne ikke oprette version.";
@@ -294,7 +298,7 @@ const VedtaegterPage = () => {
       )}
 
       {/* Opret ny version dialog */}
-      <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) { setLabel(""); setGodkendtDato(""); setNoter(""); setFil(null); } }}>
+      <Dialog open={showDialog} onOpenChange={(open) => { setShowDialog(open); if (!open) { setLabel(""); setGodkendtDato(""); setNoter(""); setFil(null); setMoedeId(""); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base">Tilføj vedtægtsversion</DialogTitle>
@@ -331,6 +335,24 @@ const VedtaegterPage = () => {
                 placeholder="F.eks. Ændringer fra generalforsamling 2024"
               />
             </div>
+            {availableMeetings.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-xs">
+                  Vedtaget på møde <span className="text-muted-foreground">(valgfrit)</span>
+                </Label>
+                <Select value={moedeId} onValueChange={setMoedeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Vælg generalforsamling..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMeetings.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label className="text-xs">
                 Dokument <span className="text-muted-foreground">(valgfrit)</span>

@@ -26,6 +26,7 @@ import DpaPage from "./pages/DpaPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 import VedtaegterPage from "./pages/VedtaegterPage";
+import AuditLogPage from "./pages/AuditLogPage";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/profil" element={<ProtectedLayout><Profile /></ProtectedLayout>} />
           <Route path="/indstillinger/team" element={<ProtectedLayout><TeamSettings /></ProtectedLayout>} />
           <Route path="/indstillinger/tilladelser" element={<ProtectedLayout><PermissionSettings /></ProtectedLayout>} />
+          <Route path="/indstillinger/log" element={<ProtectedLayout><AuditLogPage /></ProtectedLayout>} />
           <Route path="/indstillinger/forening" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/indstillinger" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/vedtaegter" element={<ProtectedLayout><VedtaegterPage /></ProtectedLayout>} />

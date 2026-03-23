@@ -1,6 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Building2, Users, ShieldCheck } from "lucide-react";
+import { Building2, Users, ShieldCheck, ScrollText } from "lucide-react";
 
 const SettingsTabs = () => {
   const perms = usePermissions();
@@ -9,7 +9,10 @@ const SettingsTabs = () => {
     { to: "/indstillinger/forening", label: "Forening", icon: Building2 },
     { to: "/indstillinger/team", label: "Team", icon: Users },
     ...(perms.erFormand
-      ? [{ to: "/indstillinger/tilladelser", label: "Tilladelser", icon: ShieldCheck }]
+      ? [
+          { to: "/indstillinger/tilladelser", label: "Tilladelser", icon: ShieldCheck },
+          { to: "/indstillinger/log", label: "Aktivitetslog", icon: ScrollText },
+        ]
       : []),
   ];
 
