@@ -168,7 +168,6 @@ const VedtaegterPage = () => {
         documentId = docData.id;
       }
 
-      // Brug as any da vedtaegt_versioner ikke er i de auto-genererede Supabase-typer
       const { data: newVersion, error } = await supabase
         .from("vedtaegt_versioner")
         .insert({

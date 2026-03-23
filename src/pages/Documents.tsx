@@ -113,7 +113,7 @@ const Documents = () => {
     const { data } = await supabase.from("documents")
       .select("id, name, category, created_at, file_size_bytes, storage_path, uploaded_by, file_type, meeting_id, kilde")
       .eq("org_id", orgId)
-      .neq("kilde", "vedtaegt")   // vedtægtsdokumenter vises kun på Vedtægter-siden
+      .or("kilde.is.null,kilde.neq.vedtaegt")  // vedtægtsdokumenter vises kun på Vedtægter-siden
       .order("created_at", { ascending: false });
 
     if (data) {

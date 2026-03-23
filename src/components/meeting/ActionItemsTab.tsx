@@ -44,9 +44,15 @@ const ActionItemsTab = ({ meetingId, orgId }: Props) => {
       .eq("meeting_id", meetingId)
       .order("created_at", { ascending: true });
 
-    const mapped = (data || []).map((item: any) => ({
-      ...item,
-      assignee: item.members,
+    const mapped = (data || []).map((item) => ({
+      id: item.id as string,
+      title: item.title as string,
+      beskrivelse: item.beskrivelse as string | null,
+      statusnote: item.statusnote as string | null,
+      status: item.status as string | null,
+      due_date: item.due_date as string | null,
+      assigned_to: item.assigned_to as string | null,
+      assignee: (item.members as { name: string } | null),
     }));
     setItems(mapped);
     setLoading(false);

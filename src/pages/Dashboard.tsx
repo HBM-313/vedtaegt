@@ -259,7 +259,7 @@ const Dashboard = () => {
         </Section>
 
         {/* Afventer godkendelse */}
-        {(loading || pendingMeetings.length > 0) && (
+        {pendingMeetings.length > 0 && (
           <Section title="Afventer godkendelse" icon={Clock} badge={pendingMeetings.length} badgeColor="warning">
             {loading ? (
               <SkeletonRows />

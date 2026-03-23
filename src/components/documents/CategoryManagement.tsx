@@ -98,7 +98,7 @@ const CategoryManagement = () => {
       name: slug,
       label: newName.trim(),
       sort_order: maxOrder,
-    } as any);
+    });
     if (error) {
       toast.error(error.message.includes("duplicate") ? "En kategori med det navn eksisterer allerede." : "Kunne ikke oprette kategori.");
     } else {
@@ -114,7 +114,7 @@ const CategoryManagement = () => {
     if (cat.er_laast) return;
     const { error } = await supabase
       .from("document_categories")
-      .update({ er_aktiv: !cat.er_aktiv } as any)
+      .update({ er_aktiv: !cat.er_aktiv })
       .eq("id", cat.id);
     if (error) { toast.error("Kunne ikke opdatere kategori."); return; }
     setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, er_aktiv: !c.er_aktiv } : c));
@@ -159,7 +159,7 @@ const CategoryManagement = () => {
     // Save new sort_order
     for (let i = 0; i < reordered.length; i++) {
       if (reordered[i].sort_order !== i) {
-        await supabase.from("document_categories").update({ sort_order: i } as any).eq("id", reordered[i].id);
+        await supabase.from("document_categories").update({ sort_order: i }).eq("id", reordered[i].id);
       }
     }
   };
