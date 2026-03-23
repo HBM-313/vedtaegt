@@ -2,10 +2,13 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Plus, Vote } from "lucide-react";
+import { Plus, Vote, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import AddActionItemDialog from "./AddActionItemDialog";
 import AfstemningDialog from "./AfstemningDialog";
 
@@ -30,9 +33,10 @@ interface Afstemning {
 interface Props {
   meetingId: string;
   orgId: string;
+  meetingStatus: string;
 }
 
-const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
+const AgendaMinutesTab = ({ meetingId, orgId, meetingStatus }: Props) => {
   const { memberId } = useOrg();
   const perms = usePermissions();
   const [items, setItems] = useState<AgendaItem[]>([]);
@@ -46,50 +50,56 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
   const contentRef = useRef(minutesContent);
   contentRef.current = minutesContent;
 
-  useEffect(() => {
-    const load = async () => {
-      const [agendaRes, minutesRes, afstemningRes] = await Promise.all([
-        supabase
-          .from("agenda_items")
-          .select("id, title, description, sort_order")
-          .eq("meeting_id", meetingId)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("minutes")
-          .select("id, content")
-          .eq("meeting_id", meetingId)
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("afstemninger")
-          .select("id, agenda_item_id, spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter")
-          .eq("meeting_id", meetingId),
-      ]);
+  // Agenda editing state
+  const [editingAgenda, setEditingAgenda] = useState(false);
+  const [editItems, setEditItems] = useState<AgendaItem[]>([]);
+  const [savingAgenda, setSavingAgenda] = useState(false);
 
-      setItems((agendaRes.data as AgendaItem[]) || []);
+  const isLocked = meetingStatus === "pending_approval" || meetingStatus === "approved";
 
-      if (minutesRes.data) {
-        setMinutesId(minutesRes.data.id);
-        try {
-          const parsed = JSON.parse(minutesRes.data.content);
-          setMinutesContent(parsed);
-        } catch {
-          setMinutesContent({});
-        }
+  const load = useCallback(async () => {
+    const [agendaRes, minutesRes, afstemningRes] = await Promise.all([
+      supabase
+        .from("agenda_items")
+        .select("id, title, description, sort_order")
+        .eq("meeting_id", meetingId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("minutes")
+        .select("id, content")
+        .eq("meeting_id", meetingId)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("afstemninger")
+        .select("id, agenda_item_id, spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter")
+        .eq("meeting_id", meetingId),
+    ]);
+
+    setItems((agendaRes.data as AgendaItem[]) || []);
+
+    if (minutesRes.data) {
+      setMinutesId(minutesRes.data.id);
+      try {
+        const parsed = JSON.parse(minutesRes.data.content);
+        setMinutesContent(parsed);
+      } catch {
+        setMinutesContent({});
       }
+    }
 
-      if (afstemningRes.data) {
-        const map: Record<string, Afstemning> = {};
-        (afstemningRes.data as Afstemning[]).forEach((a) => {
-          map[a.agenda_item_id] = a;
-        });
-        setAfstemninger(map);
-      }
+    if (afstemningRes.data) {
+      const map: Record<string, Afstemning> = {};
+      (afstemningRes.data as Afstemning[]).forEach((a) => {
+        map[a.agenda_item_id] = a;
+      });
+      setAfstemninger(map);
+    }
 
-      setLoading(false);
-    };
-    load();
+    setLoading(false);
   }, [meetingId]);
+
+  useEffect(() => { load(); }, [load]);
 
   const saveMinutes = useCallback(async () => {
     const content = JSON.stringify(contentRef.current);
@@ -122,18 +132,67 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
     }
   }, [minutesId, meetingId, orgId, memberId]);
 
-  // Auto-save every 30 seconds
+  // Auto-save every 30 seconds (disabled when locked)
   useEffect(() => {
+    if (isLocked) return;
     const interval = setInterval(() => {
       if (Object.keys(contentRef.current).length > 0) {
         saveMinutes();
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [saveMinutes]);
+  }, [saveMinutes, isLocked]);
 
   const updateContent = (itemId: string, value: string) => {
     setMinutesContent((prev) => ({ ...prev, [itemId]: value }));
+  };
+
+  // Agenda editing handlers
+  const handleSaveAgenda = async () => {
+    const filtered = editItems.filter((ei) => ei.title.trim());
+    if (filtered.length === 0) {
+      toast.error("Dagsordenen skal have mindst ét punkt.");
+      return;
+    }
+    setSavingAgenda(true);
+    try {
+      // Find removed items
+      const editIds = new Set(filtered.map((ei) => ei.id));
+      const removed = items.filter((orig) => !editIds.has(orig.id));
+
+      // Delete removed
+      for (const r of removed) {
+        await supabase.from("agenda_items").delete().eq("id", r.id);
+      }
+
+      // Upsert existing / insert new
+      for (let idx = 0; idx < filtered.length; idx++) {
+        const ei = filtered[idx];
+        if (items.some((orig) => orig.id === ei.id)) {
+          // Existing item — update
+          await supabase
+            .from("agenda_items")
+            .update({ title: ei.title.trim(), sort_order: idx })
+            .eq("id", ei.id);
+        } else {
+          // New item — insert
+          await supabase.from("agenda_items").insert({
+            meeting_id: meetingId,
+            org_id: orgId,
+            title: ei.title.trim(),
+            sort_order: idx,
+          });
+        }
+      }
+
+      toast.success("Dagsorden opdateret.");
+      setEditingAgenda(false);
+      await load();
+    } catch {
+      toast.error("Kunne ikke gemme dagsorden.");
+    } finally {
+      setSavingAgenda(false);
+    }
   };
 
   if (loading) {
@@ -156,8 +215,28 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
 
   return (
     <div className="space-y-4">
-      {saveStatus && (
+      {saveStatus && !isLocked && (
         <p className="text-xs text-muted-foreground text-right">{saveStatus}</p>
+      )}
+
+      {isLocked && (
+        <p className="text-xs text-muted-foreground">
+          {meetingStatus === "pending_approval"
+            ? "Referatet er sendt til godkendelse og kan ikke redigeres. Træk det tilbage for at foretage ændringer."
+            : "Referatet er godkendt og kan ikke ændres."}
+        </p>
+      )}
+
+      {!isLocked && perms.kanRedigereMoeder && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setEditingAgenda(true); setEditItems([...items]); }}
+          >
+            <Pencil className="h-4 w-4 mr-1" /> Rediger dagsorden
+          </Button>
+        </div>
       )}
 
       {items.map((item, i) => (
@@ -173,30 +252,33 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
           <div className="p-4 space-y-3">
             <Textarea
               value={minutesContent[item.id] || ""}
-              onChange={(e) => updateContent(item.id, e.target.value)}
-              placeholder="Skriv referat for dette punkt..."
-              className="min-h-[100px] text-sm"
+              onChange={(e) => !isLocked && updateContent(item.id, e.target.value)}
+              placeholder={isLocked ? "Referatet er låst og kan ikke redigeres." : "Skriv referat for dette punkt..."}
+              readOnly={isLocked}
+              className={`min-h-[100px] text-sm ${isLocked ? "bg-muted cursor-not-allowed" : ""}`}
             />
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAddingForItem(item.id)}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Tilføj handlingspunkt
-              </Button>
-              {perms.kanRedigereMoeder && (
+            {!isLocked && (
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setAfstemningForItem(item.id)}
+                  onClick={() => setAddingForItem(item.id)}
                 >
-                  <Vote className="h-4 w-4 mr-1" />
-                  {afstemninger[item.id] ? "Rediger afstemning" : "Registrér afstemning"}
+                  <Plus className="h-4 w-4 mr-1" />
+                  Tilføj handlingspunkt
                 </Button>
-              )}
-            </div>
+                {perms.kanRedigereMoeder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAfstemningForItem(item.id)}
+                  >
+                    <Vote className="h-4 w-4 mr-1" />
+                    {afstemninger[item.id] ? "Rediger afstemning" : "Registrér afstemning"}
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Vis eksisterende afstemning */}
             {afstemninger[item.id] && (() => {
@@ -219,9 +301,11 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
         </div>
       ))}
 
-      <Button variant="outline" size="sm" onClick={saveMinutes}>
-        Gem referat nu
-      </Button>
+      {!isLocked && (
+        <Button variant="outline" size="sm" onClick={saveMinutes}>
+          Gem referat nu
+        </Button>
+      )}
 
       {addingForItem && (
         <AddActionItemDialog
@@ -249,6 +333,59 @@ const AgendaMinutesTab = ({ meetingId, orgId }: Props) => {
           />
         );
       })()}
+
+      {/* Rediger dagsorden dialog */}
+      <Dialog open={editingAgenda} onOpenChange={(open) => { if (!open) setEditingAgenda(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base">Rediger dagsorden</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {editItems.map((ei, idx) => (
+              <div key={ei.id} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-6 shrink-0 text-right">{idx + 1}.</span>
+                <Input
+                  value={ei.title}
+                  onChange={(e) => {
+                    const updated = [...editItems];
+                    updated[idx] = { ...updated[idx], title: e.target.value };
+                    setEditItems(updated);
+                  }}
+                  placeholder="Punktets titel..."
+                  className="text-sm"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                  disabled={editItems.length <= 1}
+                  onClick={() => setEditItems(editItems.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setEditItems([
+                  ...editItems,
+                  { id: `new-${crypto.randomUUID()}`, title: "", description: null, sort_order: editItems.length },
+                ])
+              }
+            >
+              <Plus className="h-4 w-4 mr-1" /> Tilføj punkt
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingAgenda(false)}>Annullér</Button>
+            <Button onClick={handleSaveAgenda} disabled={savingAgenda}>
+              {savingAgenda ? "Gemmer..." : "Gem dagsorden"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

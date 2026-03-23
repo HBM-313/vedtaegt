@@ -77,7 +77,7 @@ const VedtaegterPage = () => {
     if (error) {
       console.error("VedtaegterPage: fejl ved hentning:", error.message);
     }
-    setVersioner((data as unknown as Version[]) || []);
+    setVersioner((data as Version[]) || []);
     setLoading(false);
   }, [orgId]);
 
@@ -166,8 +166,8 @@ const VedtaegterPage = () => {
       }
 
       // Brug as any da vedtaegt_versioner ikke er i de auto-genererede Supabase-typer
-      const { data: newVersion, error } = await (supabase
-        .from("vedtaegt_versioner") as any)
+      const { data: newVersion, error } = await supabase
+        .from("vedtaegt_versioner")
         .insert({
           org_id: orgId,
           version_label: label.trim(),
