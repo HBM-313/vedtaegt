@@ -14,7 +14,8 @@ import { formatDate, formatShortDate } from "@/lib/format";
 import { getRoleLabel } from "@/lib/roles";
 import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
-import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell, Mail } from "lucide-react";
+import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell, Mail, Calendar } from "lucide-react";
+import { downloadICal } from "@/lib/ical";
 import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
@@ -514,7 +515,7 @@ const MeetingDetail = () => {
         </TabsList>
         <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="actions"><ActionItemsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
-        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
+        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="documents">
           <MeetingDocumentsTab meetingId={meeting.id} orgId={meeting.org_id!} agendaItems={agendaItems} />
         </TabsContent>

@@ -222,7 +222,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             <header className="h-12 flex items-center border-b border-border px-4">
               <SidebarTrigger className="mr-2" />
             </header>
-            <main className="flex-1 p-6">{children}</main>
+            <main className="flex-1 p-4 md:p-6 min-w-0 overflow-x-hidden">{children}</main>
           </div>
         </div>
       </SidebarProvider>

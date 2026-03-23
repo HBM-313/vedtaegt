@@ -80,7 +80,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
         supabase.from("agenda_items").select("id, title, description, sort_order").eq("meeting_id", meeting.id).order("sort_order", { ascending: true }),
         supabase.from("minutes").select("content").eq("meeting_id", meeting.id).maybeSingle(),
         supabase.from("action_items").select("title, due_date, members!action_items_assigned_to_fkey(name)").eq("meeting_id", meeting.id),
-        supabase.from("approvals").select("approved_at, status, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id).eq("status", "godkendt"),
+        supabase.from("approvals").select("approved_at, status, fremmoedt, members!approvals_member_id_fkey(name, role)").eq("meeting_id", meeting.id),
         supabase.from("documents").select("name, category, created_at, uploaded_by, agenda_item_id, members!documents_uploaded_by_fkey(name), agenda_items!documents_agenda_item_id_fkey(title)").eq("meeting_id", meeting.id),
         supabase.from("afstemninger").select("spoergsmaal, ja_antal, nej_antal, undladt_antal, er_hemmelig, noter, agenda_item_id").eq("meeting_id", meeting.id),
       ]);
@@ -93,6 +93,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
       interface ApprovalRow {
         approved_at: string | null;
         status: string | null;
+        fremmoedt: boolean | null;
         members: { name: string; role: string } | null;
       }
       interface DocRow {
@@ -119,15 +120,19 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
           assignee: a.members?.name || "Ikke tildelt",
           due_date: a.due_date,
         })),
-        participants: approvalData.map((a) => ({
-          name: a.members?.name || "Ukendt",
-          role: a.members?.role || "",
-        })),
-        approvals: approvalData.map((a) => ({
-          name: a.members?.name || "Ukendt",
-          role: a.members?.role || "",
-          approved_at: a.approved_at,
-        })),
+        participants: approvalData
+          .filter((a) => a.fremmoedt)
+          .map((a) => ({
+            name: a.members?.name || "Ukendt",
+            role: a.members?.role || "",
+          })),
+        approvals: approvalData
+          .filter((a) => a.status === "godkendt")
+          .map((a) => ({
+            name: a.members?.name || "Ukendt",
+            role: a.members?.role || "",
+            approved_at: a.approved_at,
+          })),
         documents: docsData.map((d: DocRow) => ({
           name: d.name,
           category: d.category,
@@ -180,7 +185,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
         {data!.participants.length > 0 && (
           <View>
-            <Text style={styles.sectionTitle}>Deltagere</Text>
+            <Text style={styles.sectionTitle}>Fremmødte ({data!.participants.length})</Text>
             {data!.participants.map((p, i) => (
               <Text key={i} style={styles.participant}>
                 {p.name} ({getRoleLabel(p.role)})

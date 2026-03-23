@@ -259,7 +259,7 @@ const Documents = () => {
           <p className="text-sm mt-1">Upload dit første dokument for at komme i gang.</p>
         </div>
       ) : (
-        <div className="border rounded-lg">
+        <div className="border rounded-lg overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

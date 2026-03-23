@@ -8,7 +8,9 @@ import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/context/OrgContext";
 import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, X, Calendar } from "lucide-react";
+import { downloadICal } from "@/lib/ical";
+import { useOrg } from "@/context/OrgContext";
 import { cn } from "@/lib/utils";
 
 interface Meeting {
@@ -30,7 +32,7 @@ const filterTabs = [
 
 const MeetingsList = () => {
   const navigate = useNavigate();
-  const { orgId } = useOrg();
+  const { orgId, orgName } = useOrg();
   const perms = usePermissions();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,12 +76,29 @@ const MeetingsList = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold tracking-display">Møder</h1>
-        {perms.kanOpretteMoeder && (
-          <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nyt møde
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {filtered.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => downloadICal(
+                filtered.map((m) => ({
+                  id: m.id, title: m.title, meeting_date: m.meeting_date,
+                  location: m.location, orgName: orgName || "Forening",
+                })),
+                "vedtaegt-moeder.ics"
+              )}
+            >
+              <Calendar className="h-4 w-4 mr-1" /> Eksportér kalender
+            </Button>
+          )}
+          {perms.kanOpretteMoeder && (
+            <Button size="sm" className="press-effect" onClick={() => navigate("/moeder/nyt")}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nyt møde
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Søgning */}
