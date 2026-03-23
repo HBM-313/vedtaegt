@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -40,7 +40,6 @@ interface ApprovalRow {
 
 const MeetingDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { orgId, orgName, memberId } = useOrg();
   const perms = usePermissions();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -408,6 +407,19 @@ const MeetingDetail = () => {
               <SendHorizontal className="h-4 w-4 mr-1" /> Send til godkendelse
             </Button>
           )}
+          {meeting.meeting_date && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => downloadICal(
+                [{ id: meeting.id, title: meeting.title, meeting_date: meeting.meeting_date,
+                   location: meeting.location, orgName: orgName || "" }],
+                `vedtaegt-moede.ics`
+              )}
+            >
+              <Calendar className="h-4 w-4 mr-1" /> Tilføj til kalender
+            </Button>
+          )}
           {meeting.status === "approved" && (
             <Button size="sm" variant="outline" className="press-effect" onClick={() => setShowPdf(true)}>
               <Download className="h-4 w-4 mr-1" /> Download PDF
@@ -515,7 +527,7 @@ const MeetingDetail = () => {
         </TabsList>
         <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="actions"><ActionItemsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
-        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
+        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="documents">
           <MeetingDocumentsTab meetingId={meeting.id} orgId={meeting.org_id!} agendaItems={agendaItems} />
         </TabsContent>

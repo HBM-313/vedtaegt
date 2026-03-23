@@ -1,6 +1,6 @@
 import {
   Shield, FileText, CheckCircle2, FolderOpen, ArrowRight,
-  Users, Lock, Clock, Vote, ScrollText, Calendar,
+  Users, Lock, Vote, ScrollText, Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

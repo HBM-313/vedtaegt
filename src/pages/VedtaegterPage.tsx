@@ -81,6 +81,17 @@ const VedtaegterPage = () => {
       console.error("VedtaegterPage: fejl ved hentning:", error.message);
     }
     setVersioner((data as Version[]) || []);
+
+    // Hent generalforsamlinger til mødekobling
+    const { data: meetingsData } = await supabase
+      .from("meetings")
+      .select("id, title, meeting_date")
+      .eq("org_id", orgId)
+      .in("meeting_type", ["ordinaer_generalforsamling", "ekstraordinaer_generalforsamling"])
+      .order("meeting_date", { ascending: false })
+      .limit(20);
+    setAvailableMeetings(meetingsData || []);
+
     setLoading(false);
   }, [orgId]);
 

@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Check, X, UserCheck, UserX } from "lucide-react";
@@ -19,11 +18,10 @@ interface Approval {
 
 interface Props {
   meetingId: string;
-  orgId: string;
   meetingStatus: string;
 }
 
-const ParticipantsTab = ({ meetingId, orgId, meetingStatus }: Props) => {
+const ParticipantsTab = ({ meetingId, meetingStatus }: Props) => {
   const perms = usePermissions();
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);

@@ -10,7 +10,6 @@ import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Plus, Search, X, Calendar } from "lucide-react";
 import { downloadICal } from "@/lib/ical";
-import { useOrg } from "@/context/OrgContext";
 import { cn } from "@/lib/utils";
 
 interface Meeting {

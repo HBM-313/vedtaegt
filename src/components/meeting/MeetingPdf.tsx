@@ -87,7 +87,7 @@ const MeetingPdf = ({ meeting, orgName, onClose }: Props) => {
 
       let mc: Record<string, string> = {};
       if (minutesRes.data?.content) {
-        try { mc = JSON.parse(minutesRes.data.content); } catch (_) { mc = {}; }
+        try { mc = JSON.parse(minutesRes.data.content); } catch { mc = {}; }
       }
 
       interface ApprovalRow {
