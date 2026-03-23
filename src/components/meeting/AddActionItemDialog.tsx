@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,6 +28,7 @@ interface Props {
 
 const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props) => {
   const [title, setTitle] = useState("");
+  const [beskrivelse, setBeskrivelse] = useState("");
   const [assignedTo, setAssignedTo] = useState<string>("");
   const [dueDate, setDueDate] = useState<Date>();
   const [members, setMembers] = useState<Member[]>([]);
@@ -44,10 +46,7 @@ const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
-      toast.error("Titel er påkrævet.");
-      return;
-    }
+    if (!title.trim()) { toast.error("Titel er påkrævet."); return; }
 
     setLoading(true);
     const { error } = await supabase.from("action_items").insert({
@@ -55,6 +54,7 @@ const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props)
       org_id: orgId,
       agenda_item_id: agendaItemId || null,
       title: title.trim(),
+      beskrivelse: beskrivelse.trim() || null,
       assigned_to: assignedTo || null,
       due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
       status: "open",
@@ -81,8 +81,20 @@ const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props)
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Beskriv opgaven"
+              placeholder="Beskriv opgaven kort"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">
+              Beskrivelse <span className="text-muted-foreground">(valgfrit)</span>
+            </Label>
+            <Textarea
+              value={beskrivelse}
+              onChange={(e) => setBeskrivelse(e.target.value)}
+              placeholder="Uddybende detaljer om opgaven..."
+              className="min-h-[80px] text-sm"
             />
           </div>
 
@@ -106,10 +118,7 @@ const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props)
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dueDate && "text-muted-foreground"
-                  )}
+                  className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}
                 >
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   {dueDate ? format(dueDate, "d. MMMM yyyy", { locale: da }) : "Vælg frist"}
@@ -129,9 +138,7 @@ const AddActionItemDialog = ({ meetingId, orgId, agendaItemId, onClose }: Props)
           </div>
 
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Annullér
-            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>Annullér</Button>
             <Button type="submit" size="sm" disabled={loading}>
               {loading ? "Tilføjer..." : "Tilføj"}
             </Button>
