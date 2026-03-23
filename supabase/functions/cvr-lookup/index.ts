@@ -39,22 +39,38 @@ Deno.serve(async (req) => {
       );
     }
 
-    const res = await fetch(VIRK_CVR_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: {
-          term: { "Vrvirksomhed.cvrNummer": parseInt(cvr, 10) },
-        },
-        _source: [
-          "Vrvirksomhed.cvrNummer",
-          "Vrvirksomhed.virksomhedMetadata.nyesteNavn",
-          "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse",
-          "Vrvirksomhed.virksomhedMetadata.nyesteKontaktoplysninger",
-        ],
-        size: 1,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    let res: Response;
+    try {
+      res = await fetch(VIRK_CVR_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          query: {
+            term: { "Vrvirksomhed.cvrNummer": parseInt(cvr, 10) },
+          },
+          _source: [
+            "Vrvirksomhed.cvrNummer",
+            "Vrvirksomhed.virksomhedMetadata.nyesteNavn",
+            "Vrvirksomhed.virksomhedMetadata.nyesteBeliggenhedsadresse",
+            "Vrvirksomhed.virksomhedMetadata.nyesteKontaktoplysninger",
+          ],
+          size: 1,
+        }),
+      });
+    } catch (fetchErr: unknown) {
+      clearTimeout(timeout);
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      console.error(`CVR API fetch failed: ${msg}`);
+      return new Response(
+        JSON.stringify({ error: "CVR-opslag timeout eller netværksfejl. Prøv igen." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    clearTimeout(timeout);
 
     if (!res.ok) {
       console.error(`CVR API HTTP ${res.status}: ${await res.text()}`);
