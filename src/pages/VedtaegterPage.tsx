@@ -77,7 +77,7 @@ const VedtaegterPage = () => {
     if (error) {
       console.error("VedtaegterPage: fejl ved hentning:", error.message);
     }
-    setVersioner((data as unknown as Version[]) || []);
+    setVersioner((data as Version[]) || []);
     setLoading(false);
   }, [orgId]);
 
