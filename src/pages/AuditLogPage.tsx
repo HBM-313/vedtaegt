@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import SettingsTabs from "@/components/SettingsTabs";
 import { Search, X } from "lucide-react";
+import { getRoleLabel } from "@/lib/roles";
 
 interface AuditEvent {
   id: string;
@@ -173,11 +174,28 @@ const AuditLogPage = () => {
                   {e.user_name}
                   {e.metadata && Object.keys(e.metadata).length > 0 && (
                     <span className="ml-2 opacity-60">
-                      {Object.entries(e.metadata)
-                        .filter(([k]) => !["resource_id"].includes(k))
-                        .map(([k, v]) => `${k}: ${String(v)}`)
-                        .slice(0, 3)
-                        .join(" · ")}
+                      {(() => {
+                        const m = e.metadata!;
+                        // Brugervenlig visning baseret på hændelsestype
+                        if (e.action === "member.invite_revoked") {
+                          const role = m.role ? getRoleLabel(String(m.role)) : null;
+                          return [role, m.email].filter(Boolean).join(" — ");
+                        }
+                        if (e.action === "member.role_changed") {
+                          const from = m.from ? getRoleLabel(String(m.from)) : null;
+                          const to = m.to ? getRoleLabel(String(m.to)) : null;
+                          return from && to ? `${from} → ${to}` : String(m.email ?? "");
+                        }
+                        if (e.action === "member.removed") {
+                          return String(m.name ?? m.email ?? "");
+                        }
+                        // Generisk fallback
+                        return Object.entries(m)
+                          .filter(([k]) => !["resource_id"].includes(k))
+                          .map(([, v]) => String(v))
+                          .slice(0, 2)
+                          .join(" · ");
+                      })()}
                     </span>
                   )}
                 </p>

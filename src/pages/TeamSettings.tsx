@@ -106,7 +106,7 @@ const TeamSettings = () => {
   }, {});
 
   const handleRoleChange = async (member: Member, newRole: string) => {
-    if (!perms.kanAendreRoller) { toast.error("Du har ikke tilladelse til at ændre roller."); return; }
+    if (!perms.erFormand) { toast.error("Kun formanden kan ændre roller."); return; }
     await supabase.from("members").update({ role: newRole }).eq("id", member.id);
     await logAuditEvent("member.role_changed", "member", member.id, { from: member.role, to: newRole, email: member.email });
     toast.success(`Rolle ændret til ${getRoleLabel(newRole)}`);
@@ -152,8 +152,13 @@ const TeamSettings = () => {
   };
 
   const handleRevokeInvite = async (member: Member) => {
+    if (!perms.kanInvitereMedlemmer) { toast.error("Du har ikke tilladelse til at trække invitationer tilbage."); return; }
+    await logAuditEvent("member.invite_revoked", "member", member.id, {
+      email: member.email,
+      role: member.role,
+      name: member.name,
+    });
     await supabase.from("members").delete().eq("id", member.id);
-    await logAuditEvent("member.invite_revoked", "member", member.id, { email: member.email });
     toast.success("Invitation trukket tilbage."); fetchMembers();
   };
 
@@ -224,7 +229,7 @@ const TeamSettings = () => {
                   <TableHead className="hidden lg:table-cell">Telefon</TableHead>
                   <TableHead className="hidden md:table-cell">Tilsluttet</TableHead>
                   {perms.erFormand && <TableHead className="hidden md:table-cell">Fravær</TableHead>}
-                  {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && <TableHead className="text-right">Handlinger</TableHead>}
+                  {(perms.erFormand || perms.kanFjerneMedlemmer) && <TableHead className="text-right">Handlinger</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -255,7 +260,7 @@ const TeamSettings = () => {
                         )}
                       </TableCell>
                     )}
-                    {(perms.kanAendreRoller || perms.kanFjerneMedlemmer) && (
+                    {(perms.erFormand || perms.kanFjerneMedlemmer) && (
                       <TableCell className="text-right">
                         {m.id !== memberId && m.role !== "formand" && (
                           <DropdownMenu>
@@ -263,7 +268,7 @@ const TeamSettings = () => {
                               <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {perms.kanAendreRoller && INVITABLE_ROLES.map((r) => (
+                              {perms.erFormand && m.role !== "formand" && INVITABLE_ROLES.map((r) => (
                                 r !== m.role && (
                                   <DropdownMenuItem key={r} onClick={() => handleRoleChange(m, r)}>
                                     Gør til {getRoleLabel(r)}
