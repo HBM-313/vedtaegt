@@ -222,6 +222,35 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
 </body></html>`,
       };
 
+    case "gf_indkaldelse": {
+      const agendaHtml = Array.isArray(data.agendaItems)
+        ? `<ol style="font-size:14px;color:#374151;padding-left:20px;margin:12px 0;">
+            ${(data.agendaItems as Array<{title: string}>).map(a => `<li style="margin-bottom:4px;">${a.title}</li>`).join("")}
+          </ol>`
+        : "";
+      return {
+        subject: `Indkaldelse til ${data.meetingType === "ekstraordinaer_generalforsamling" ? "ekstraordinær " : "ordinær "}generalforsamling — ${data.orgName}`,
+        html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:Arial,sans-serif;background:#f9fafb;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:8px;border:1px solid #e5e7eb;padding:40px;">
+  <h1 style="font-size:20px;color:#0f172a;margin:0 0 8px;">Indkaldelse til generalforsamling</h1>
+  <p style="font-size:14px;color:#64748b;margin:0 0 24px;">${data.orgName}</p>
+  <table style="width:100%;font-size:13px;color:#64748b;margin:0 0 24px;">
+    <tr><td style="padding:4px 0;font-weight:600;width:100px;">Dato:</td><td><strong style="color:#0f172a;">${data.meetingDate}</strong></td></tr>
+    ${data.meetingTime ? `<tr><td style="padding:4px 0;font-weight:600;">Tidspunkt:</td><td><strong style="color:#0f172a;">${data.meetingTime}</strong></td></tr>` : ""}
+    ${data.location ? `<tr><td style="padding:4px 0;font-weight:600;">Sted:</td><td><strong style="color:#0f172a;">${data.location}</strong></td></tr>` : ""}
+  </table>
+  <p style="font-size:14px;font-weight:600;color:#0f172a;margin:0 0 4px;">Dagsorden</p>
+  ${agendaHtml}
+  ${data.noter ? `<p style="font-size:13px;color:#64748b;margin:16px 0 0;padding:12px;background:#f8fafc;border-radius:6px;border-left:3px solid #e2e8f0;">${data.noter}</p>` : ""}
+  <p style="font-size:12px;color:#94a3b8;margin-top:32px;">Indkaldelse sendt af ${data.senderName} via Vedtægt.</p>
+</div>
+</body></html>`,
+      };
+    }
+
     default:
       throw new Error(`Unknown template: ${templateName}`);
   }

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/context/OrgContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
+import { isGeneralforsamling } from "@/lib/meetingTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +14,7 @@ import { formatDate, formatShortDate } from "@/lib/format";
 import { getRoleLabel } from "@/lib/roles";
 import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
-import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell } from "lucide-react";
+import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell, Mail } from "lucide-react";
 import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
 import ParticipantsTab from "@/components/meeting/ParticipantsTab";
@@ -52,6 +53,7 @@ const MeetingDetail = () => {
   const [rejector, setRejector] = useState<{ name: string; role: string } | null>(null);
   const [reminderLoading, setReminderLoading] = useState(false);
   const [agendaItems, setAgendaItems] = useState<{ id: string; title: string }[]>([]);
+  const [indkaldelseLoading, setIndkaldelseLoading] = useState(false);
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
@@ -218,6 +220,76 @@ const MeetingDetail = () => {
     }
   };
 
+  const handleSendIndkaldelse = async () => {
+    if (!meeting || !id || !orgId) return;
+    setIndkaldelseLoading(true);
+    try {
+      const { data: allMembers } = await supabase
+        .from("members")
+        .select("id, name, email")
+        .eq("org_id", orgId)
+        .not("user_id", "is", null)
+        .eq("email_bekraeftet", true);
+
+      if (!allMembers || allMembers.length === 0) {
+        toast.error("Ingen aktive medlemmer at sende til.");
+        return;
+      }
+
+      const { data: senderMember } = await supabase
+        .from("members")
+        .select("name")
+        .eq("org_id", orgId)
+        .eq("role", "formand")
+        .limit(1)
+        .single();
+
+      const meetingDate = meeting.meeting_date
+        ? new Intl.DateTimeFormat("da-DK", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
+        : "Dato ikke fastsat";
+      const meetingTime = meeting.meeting_date
+        ? new Intl.DateTimeFormat("da-DK", { hour: "2-digit", minute: "2-digit" }).format(new Date(meeting.meeting_date))
+        : null;
+
+      let emailWarningShown = false;
+      for (const member of allMembers) {
+        const { data: result } = await supabase.functions.invoke("send-email", {
+          body: {
+            to: member.email,
+            templateName: "gf_indkaldelse",
+            templateData: {
+              orgName: orgName || "",
+              meetingType: meeting.meeting_type,
+              meetingDate,
+              meetingTime,
+              location: meeting.location,
+              agendaItems,
+              senderName: senderMember?.name || "Formanden",
+              recipientName: member.name,
+            },
+          },
+        });
+        if (result?.is_test_domain_restriction && !emailWarningShown) {
+          toast.warning("E-mails kunne ikke sendes (Resend testdomæne). Indkaldelse kræver verificeret domæne.", { duration: 8000 });
+          emailWarningShown = true;
+        }
+      }
+
+      await logAuditEvent("meeting.indkaldelse_sendt", "meeting", id, {
+        antal_modtagere: allMembers.length,
+      });
+
+      if (!emailWarningShown) {
+        toast.success(`Indkaldelse sendt til ${allMembers.length} medlemmer.`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Kunne ikke sende indkaldelse.";
+      toast.error(msg);
+    } finally {
+      setIndkaldelseLoading(false);
+    }
+  };
+
   const handleStartMeeting = async () => {
     if (!meeting || !id || !perms.kanRedigereMoeder) return;
     setStatusLoading(true);
@@ -323,6 +395,11 @@ const MeetingDetail = () => {
           {perms.kanRedigereMoeder && meeting.status === "draft" && (
             <Button size="sm" className="press-effect" onClick={handleStartMeeting} disabled={statusLoading}>
               <Play className="h-4 w-4 mr-1" /> Start møde
+            </Button>
+          )}
+          {perms.kanSendeTilGodkendelse && meeting.status === "draft" && isGeneralforsamling(meeting.meeting_type || "") && (
+            <Button size="sm" variant="outline" className="press-effect" onClick={handleSendIndkaldelse} disabled={indkaldelseLoading}>
+              <Mail className="h-4 w-4 mr-1" /> {indkaldelseLoading ? "Sender..." : "Send indkaldelse"}
             </Button>
           )}
           {perms.kanSendeTilGodkendelse && meeting.status === "active" && (
