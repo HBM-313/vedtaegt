@@ -15,9 +15,12 @@ export interface CvrData {
 // ─────────────────────────────────────────────
 async function lookupViaEdgeFunction(cvr: string): Promise<CvrData | null> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const { data, error } = await supabase.functions.invoke("cvr-lookup", {
       body: { cvr },
     });
+    clearTimeout(timeout);
     if (error || !data || data.error) return null;
     return data as CvrData;
   } catch {
