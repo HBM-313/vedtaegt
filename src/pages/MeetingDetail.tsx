@@ -435,7 +435,7 @@ const MeetingDetail = () => {
           <TabsTrigger value="participants" className="text-xs">Deltagere</TabsTrigger>
           <TabsTrigger value="documents" className="text-xs">Dokumenter</TabsTrigger>
         </TabsList>
-        <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
+        <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="actions"><ActionItemsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
         <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
         <TabsContent value="documents">
