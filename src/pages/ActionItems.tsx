@@ -6,11 +6,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { logAuditEvent } from "@/lib/audit";
 import { formatShortDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Search, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface ActionItem {
@@ -27,6 +28,7 @@ const ActionItems = () => {
   const [loading, setLoading] = useState(true);
   const [showMine, setShowMine] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "open" | "done">("all");
+  const [search, setSearch] = useState("");
 
   const fetchItems = useCallback(async () => {
     if (!orgId) return;
@@ -60,8 +62,17 @@ const ActionItems = () => {
     if (showMine && memberId) result = result.filter((i) => i.assigned_to === memberId);
     if (statusFilter === "open") result = result.filter((i) => i.status !== "done");
     if (statusFilter === "done") result = result.filter((i) => i.status === "done");
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.meeting_title?.toLowerCase().includes(q) ||
+          i.assignee_name?.toLowerCase().includes(q)
+      );
+    }
     return result;
-  }, [items, showMine, memberId, statusFilter]);
+  }, [items, showMine, memberId, statusFilter, search]);
 
   const toggleStatus = async (item: ActionItem) => {
     const isOwnTask = item.assigned_to === memberId;
@@ -91,6 +102,26 @@ const ActionItems = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Handlingspunkter</h1>
+
+      {/* Søgning */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Søg i handlingspunkter, møder eller ansvarlige..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button variant={statusFilter === "all" && !showMine ? "default" : "outline"} size="sm" onClick={() => { setStatusFilter("all"); setShowMine(false); }}>Alle</Button>
         <Button variant={showMine ? "default" : "outline"} size="sm" onClick={() => setShowMine(!showMine)}>Mine</Button>
@@ -103,8 +134,17 @@ const ActionItems = () => {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <ClipboardCheck className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p className="text-lg font-medium">Ingen handlingspunkter</p>
-          <p className="text-sm mt-1">De oprettes under hvert mødes dagsordenspunkter.</p>
+          {search ? (
+            <>
+              <p className="text-lg font-medium">Ingen resultater</p>
+              <p className="text-sm mt-1">Ingen handlingspunkter matcher "{search}".</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-medium">Ingen handlingspunkter</p>
+              <p className="text-sm mt-1">De oprettes under hvert mødes dagsordenspunkter.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="border rounded-lg">

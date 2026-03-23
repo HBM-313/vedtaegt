@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, MeetingTypeBadge } from "@/components/StatusBadge";
 import { useOrg } from "@/context/OrgContext";
 import { formatShortDate } from "@/lib/format";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Plus } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Meeting {
@@ -34,10 +35,10 @@ const MeetingsList = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (!orgId) return;
-
     const load = async () => {
       setLoading(true);
       let query = supabase
@@ -55,9 +56,19 @@ const MeetingsList = () => {
       setMeetings((data as Meeting[]) || []);
       setLoading(false);
     };
-
     load();
   }, [orgId, filter]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return meetings;
+    const q = search.toLowerCase();
+    return meetings.filter(
+      (m) =>
+        m.title.toLowerCase().includes(q) ||
+        m.location?.toLowerCase().includes(q) ||
+        (m.meeting_date && formatShortDate(m.meeting_date).toLowerCase().includes(q))
+    );
+  }, [meetings, search]);
 
   return (
     <div>
@@ -68,6 +79,25 @@ const MeetingsList = () => {
             <Plus className="h-4 w-4 mr-1" />
             Nyt møde
           </Button>
+        )}
+      </div>
+
+      {/* Søgning */}
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Søg i møder..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 pr-9"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
         )}
       </div>
 
@@ -89,21 +119,22 @@ const MeetingsList = () => {
         ))}
       </div>
 
-      {/* Table */}
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
         </div>
-      ) : meetings.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="ring-1 ring-border rounded-sm p-8 text-center">
           <p className="text-sm text-muted-foreground mb-4">
-            {filter === "all"
+            {search
+              ? `Ingen møder matcher "${search}".`
+              : filter === "all"
               ? "Ingen møder endnu. Opret dit første møde."
               : "Ingen møder matcher filteret."}
           </p>
-          {filter === "all" && (
+          {!search && filter === "all" && (
             <Button size="sm" onClick={() => navigate("/moeder/nyt")}>
               Opret møde
             </Button>
@@ -121,7 +152,7 @@ const MeetingsList = () => {
               </tr>
             </thead>
             <tbody>
-              {meetings.map((m) => (
+              {filtered.map((m) => (
                 <tr
                   key={m.id}
                   onClick={() => navigate(`/moeder/${m.id}`)}
@@ -146,6 +177,11 @@ const MeetingsList = () => {
               ))}
             </tbody>
           </table>
+          {search && (
+            <p className="text-xs text-muted-foreground p-3 border-t border-border">
+              {filtered.length} af {meetings.length} møder
+            </p>
+          )}
         </div>
       )}
     </div>
