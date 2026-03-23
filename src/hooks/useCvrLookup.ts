@@ -11,27 +11,8 @@ export interface CvrData {
 }
 
 // ─────────────────────────────────────────────
-// Primær: Supabase Edge Function (server-side)
-// ─────────────────────────────────────────────
-async function lookupViaEdgeFunction(cvr: string): Promise<CvrData | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const { data, error } = await supabase.functions.invoke("cvr-lookup", {
-      body: { cvr },
-    });
-    clearTimeout(timeout);
-    if (error || !data || data.error) return null;
-    return data as CvrData;
-  } catch {
-    return null;
-  }
-}
-
-// ─────────────────────────────────────────────
-// Fallback: cvrapi.dk direkte fra browser
-// cvrapi.dk blokerer cloud/server IP-ranges men tillader browser-kald.
-// Browseren sætter automatisk User-Agent — ingen ekstra header nødvendig.
+// Primær: cvrapi.dk direkte fra browser
+// (stabilt i preview og kræver ingen backend-hop)
 // ─────────────────────────────────────────────
 async function lookupViaCvrApi(cvr: string): Promise<CvrData | null> {
   try {
@@ -55,19 +36,36 @@ async function lookupViaCvrApi(cvr: string): Promise<CvrData | null> {
 }
 
 // ─────────────────────────────────────────────
-// Hook — edge function primær, cvrapi.dk fallback
+// Fallback: Supabase Edge Function (server-side)
+// ─────────────────────────────────────────────
+async function lookupViaEdgeFunction(cvr: string): Promise<CvrData | null> {
+  try {
+    const result = await Promise.race([
+      supabase.functions.invoke("cvr-lookup", { body: { cvr } }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 10000)
+      ),
+    ]);
+
+    const { data, error } = result as { data: unknown; error: unknown };
+    if (error || !data || (data as { error?: unknown }).error) return null;
+    return data as CvrData;
+  } catch {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Hook — cvrapi.dk primær, edge function fallback
 // ─────────────────────────────────────────────
 export function useCvrLookup() {
   const lookup = useCallback(async (cvr: string): Promise<CvrData | null> => {
     if (!/^\d{8}$/.test(cvr)) return null;
 
-    // Forsøg edge function først
-    const edgeResult = await lookupViaEdgeFunction(cvr);
-    if (edgeResult) return edgeResult;
+    const directResult = await lookupViaCvrApi(cvr);
+    if (directResult) return directResult;
 
-    // Edge function utilgængelig — brug cvrapi.dk direkte fra browser
-    console.warn("useCvrLookup: edge function utilgængelig, falder tilbage til cvrapi.dk");
-    return lookupViaCvrApi(cvr);
+    return lookupViaEdgeFunction(cvr);
   }, []);
 
   return { lookup };
