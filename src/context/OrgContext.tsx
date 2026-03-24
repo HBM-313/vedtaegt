@@ -14,6 +14,7 @@ export interface RolePermission {
   kan_aendre_roller: boolean;
   kan_se_indstillinger: boolean;
   kan_redigere_forening: boolean;
+  kan_administrere_medlemsregister: boolean;
   arver_formand_ved_fravaer: boolean;
 }
 

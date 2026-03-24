@@ -51,6 +51,7 @@ const PERM_FIELDS: PermField[] = [
   { key: "kan_aendre_roller", label: "Ændre roller", category: "Indstillinger" },
   { key: "kan_se_indstillinger", label: "Se indstillinger", category: "Indstillinger" },
   { key: "kan_redigere_forening", label: "Redigere foreningsoplysninger", category: "Indstillinger" },
+  { key: "kan_administrere_medlemsregister", label: "Administrere foreningsmedlemmer", category: "Medlemsregister" },
 ];
 
 const VIKARIAT_FIELD: PermField = {

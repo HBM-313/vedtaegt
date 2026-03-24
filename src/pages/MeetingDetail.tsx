@@ -22,6 +22,7 @@ import ParticipantsTab from "@/components/meeting/ParticipantsTab";
 import MeetingDocumentsTab from "@/components/meeting/MeetingDocumentsTab";
 import MeetingPdf from "@/components/meeting/MeetingPdf";
 import InPlatformApproval from "@/components/meeting/InPlatformApproval";
+import ShareLinkSection from "@/components/meeting/ShareLinkSection";
 
 interface Meeting {
   id: string; title: string; meeting_date: string | null;
@@ -29,6 +30,9 @@ interface Meeting {
   godkendelse_frist_dage: number | null; afvist_af: string | null; afvist_at: string | null;
   afvist_kommentar: string | null; godkendelse_runde: number | null; sendt_af: string | null;
   meeting_type: string | null;
+  share_token: string | null;
+  share_aktiv: boolean | null;
+  share_pin_hash: string | null;
 }
 
 interface ApprovalRow {
@@ -54,6 +58,7 @@ const MeetingDetail = () => {
   const [reminderLoading, setReminderLoading] = useState(false);
   const [agendaItems, setAgendaItems] = useState<{ id: string; title: string }[]>([]);
   const [indkaldelseLoading, setIndkaldelseLoading] = useState(false);
+  const [indkaldelseMaalgruppe, setIndkaldelseMaalgruppe] = useState<"bestyrelse" | "foreningsmedlemmer" | "begge">("begge");
 
   const loadMeeting = useCallback(async () => {
     if (!id) return;
@@ -224,15 +229,24 @@ const MeetingDetail = () => {
     if (!meeting || !id || !orgId) return;
     setIndkaldelseLoading(true);
     try {
-      const { data: allMembers } = await supabase
-        .from("members")
-        .select("id, name, email")
-        .eq("org_id", orgId)
-        .not("user_id", "is", null)
-        .eq("email_bekraeftet", true);
+      // Hent modtagere baseret på målgruppe
+      const [bestyrelsesRes, foreningsRes] = await Promise.all([
+        (indkaldelseMaalgruppe === "bestyrelse" || indkaldelseMaalgruppe === "begge")
+          ? supabase.from("members").select("name, email").eq("org_id", orgId)
+              .not("user_id", "is", null).eq("email_bekraeftet", true)
+          : Promise.resolve({ data: [] }),
+        (indkaldelseMaalgruppe === "foreningsmedlemmer" || indkaldelseMaalgruppe === "begge")
+          ? supabase.from("foreningsmedlemmer").select("navn, email").eq("org_id", orgId).not("email", "is", null)
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      if (!allMembers || allMembers.length === 0) {
-        toast.error("Ingen aktive medlemmer at sende til.");
+      const allMembers: { name: string; email: string }[] = [
+        ...(bestyrelsesRes.data || []).map((m: { name: string; email: string }) => ({ name: m.name, email: m.email })),
+        ...(foreningsRes.data || []).map((m: { navn: string; email: string | null }) => ({ name: m.navn, email: m.email! })),
+      ];
+
+      if (allMembers.length === 0) {
+        toast.error("Ingen modtagere at sende til. Tjek at e-mails er udfyldt.");
         return;
       }
 
@@ -253,6 +267,7 @@ const MeetingDetail = () => {
 
       let emailWarningShown = false;
       for (const member of allMembers) {
+        if (!member.email) continue;
         const { data: result } = await supabase.functions.invoke("send-email", {
           body: {
             to: member.email,
@@ -398,9 +413,20 @@ const MeetingDetail = () => {
             </Button>
           )}
           {perms.kanSendeTilGodkendelse && meeting.status === "draft" && isGeneralforsamling(meeting.meeting_type || "") && (
-            <Button size="sm" variant="outline" className="press-effect" onClick={handleSendIndkaldelse} disabled={indkaldelseLoading}>
-              <Mail className="h-4 w-4 mr-1" /> {indkaldelseLoading ? "Sender..." : "Send indkaldelse"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <select
+                value={indkaldelseMaalgruppe}
+                onChange={(e) => setIndkaldelseMaalgruppe(e.target.value as "bestyrelse" | "foreningsmedlemmer" | "begge")}
+                className="text-xs border border-border rounded-sm px-2 py-1.5 bg-background"
+              >
+                <option value="begge">Bestyrelse + foreningsmedlemmer</option>
+                <option value="bestyrelse">Kun bestyrelse</option>
+                <option value="foreningsmedlemmer">Kun foreningsmedlemmer</option>
+              </select>
+              <Button size="sm" variant="outline" className="press-effect" onClick={handleSendIndkaldelse} disabled={indkaldelseLoading}>
+                <Mail className="h-4 w-4 mr-1" /> {indkaldelseLoading ? "Sender..." : "Send indkaldelse"}
+              </Button>
+            </div>
           )}
           {perms.kanSendeTilGodkendelse && meeting.status === "active" && (
             <Button size="sm" className="press-effect" onClick={openSendModal} disabled={statusLoading}>
@@ -527,11 +553,24 @@ const MeetingDetail = () => {
         </TabsList>
         <TabsContent value="agenda"><AgendaMinutesTab meetingId={meeting.id} orgId={meeting.org_id!} meetingStatus={meeting.status || "draft"} /></TabsContent>
         <TabsContent value="actions"><ActionItemsTab meetingId={meeting.id} orgId={meeting.org_id!} /></TabsContent>
-        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} meetingStatus={meeting.status || "draft"} /></TabsContent>
+        <TabsContent value="participants"><ParticipantsTab meetingId={meeting.id} meetingStatus={meeting.status || "draft"} meetingType={meeting.meeting_type} orgId={meeting.org_id ?? undefined} /></TabsContent>
         <TabsContent value="documents">
           <MeetingDocumentsTab meetingId={meeting.id} orgId={meeting.org_id!} agendaItems={agendaItems} />
         </TabsContent>
       </Tabs>
+
+      {/* Delelink — kun formanden */}
+      {perms.erFormand && (
+        <ShareLinkSection
+          meetingId={meeting.id}
+          shareToken={meeting.share_token ?? null}
+          shareAktiv={meeting.share_aktiv ?? false}
+          sharePinHash={meeting.share_pin_hash ?? null}
+          onUpdate={(token, aktiv, pinHash) => {
+            setMeeting((prev) => prev ? { ...prev, share_token: token, share_aktiv: aktiv, share_pin_hash: pinHash } : prev);
+          }}
+        />
+      )}
 
       {showPdf && <MeetingPdf meeting={meeting} orgName={orgName || ""} onClose={() => setShowPdf(false)} />}
 

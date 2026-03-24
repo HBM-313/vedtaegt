@@ -30,6 +30,7 @@ interface Org {
   adresse: string | null; postnummer: string | null; by: string | null;
   telefon: string | null; kontakt_email: string | null;
   max_bestyrelsesmedlemmer: number | null; max_suppleanter: number | null;
+  quorum_naevner: number | null;
 }
 
 const PLAN_LIMITS = {
@@ -67,6 +68,7 @@ const OrgSettings = () => {
   const [kontaktEmail, setKontaktEmail] = useState("");
   const [maxBestyrelse, setMaxBestyrelse] = useState(5);
   const [maxSuppleanter, setMaxSuppleanter] = useState(2);
+  const [quorumNaevner, setQuorumNaevner] = useState(4);
   const [savingBoard, setSavingBoard] = useState(false);
   const [boardCounts, setBoardCounts] = useState({ bestyrelsesmedlem: 0, suppleant: 0 });
   const [usage, setUsage] = useState<UsageData>({ meetingsThisYear: 0, membersCount: 0, storageMb: 0 });
@@ -96,6 +98,7 @@ const OrgSettings = () => {
       setKontaktEmail(o.kontakt_email || "");
       setMaxBestyrelse(o.max_bestyrelsesmedlemmer ?? 5);
       setMaxSuppleanter(o.max_suppleanter ?? 2);
+      setQuorumNaevner(o.quorum_naevner ?? 4);
     }
     if (membersRes.data) {
       const counts = membersRes.data.reduce<Record<string, number>>((acc, m) => { acc[m.role] = (acc[m.role] || 0) + 1; return acc; }, {});
@@ -151,7 +154,7 @@ const OrgSettings = () => {
     if (!orgId) return;
     if (!perms.kanRedigereForening) { toast.error("Du har ikke tilladelse."); return; }
     setSavingBoard(true);
-    const { error } = await supabase.from("organizations").update({ max_bestyrelsesmedlemmer: maxBestyrelse, max_suppleanter: maxSuppleanter }).eq("id", orgId);
+    const { error } = await supabase.from("organizations").update({ max_bestyrelsesmedlemmer: maxBestyrelse, max_suppleanter: maxSuppleanter, quorum_naevner: quorumNaevner }).eq("id", orgId);
     if (error) toast.error("Kunne ikke gemme bestyrelsesstruktur."); else toast.success("Bestyrelsesstruktur gemt.");
     setSavingBoard(false);
   };
@@ -362,6 +365,22 @@ const OrgSettings = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Aktuel bestyrelse: {boardCounts.bestyrelsesmedlem} / {maxBestyrelse} bestyrelsesmedlemmer, {boardCounts.suppleant} / {maxSuppleanter} suppleanter</p>
+            <div className="space-y-2">
+              <Label htmlFor="quorum-naevner" className="text-xs">Quorum-krav ved generalforsamling</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Mindst 1/</span>
+                <Input
+                  id="quorum-naevner"
+                  type="number"
+                  min={2}
+                  max={10}
+                  value={quorumNaevner}
+                  onChange={(e) => setQuorumNaevner(Math.min(10, Math.max(2, parseInt(e.target.value) || 4)))}
+                  className="w-20"
+                />
+                <span className="text-sm text-muted-foreground">af stemmeberettigede skal være fremmødt</span>
+              </div>
+            </div>
             <Button onClick={handleSaveBoard} disabled={savingBoard} size="sm">{savingBoard ? "Gemmer..." : "Gem bestyrelsesstruktur"}</Button>
           </CardContent>
         </Card>

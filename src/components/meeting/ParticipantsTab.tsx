@@ -6,6 +6,7 @@ import { Check, X, UserCheck, UserX } from "lucide-react";
 import { formatShortDate } from "@/lib/format";
 import { getRoleLabel } from "@/lib/roles";
 import { usePermissions } from "@/hooks/usePermissions";
+import { isGeneralforsamling } from "@/lib/meetingTypes";
 import { toast } from "sonner";
 
 interface Approval {
@@ -19,9 +20,13 @@ interface Approval {
 interface Props {
   meetingId: string;
   meetingStatus: string;
+  meetingType?: string | null;
+  orgId?: string;
 }
 
-const ParticipantsTab = ({ meetingId, meetingStatus }: Props) => {
+const ParticipantsTab = ({ meetingId, meetingStatus, meetingType, orgId }: Props) => {
+  const [foreningsmedlemmerAntal, setForeningsmedlemmerAntal] = useState<number | null>(null);
+  const [quorumNaevner, setQuorumNaevner] = useState<number>(4);
   const perms = usePermissions();
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +57,22 @@ const ParticipantsTab = ({ meetingId, meetingStatus }: Props) => {
   }, [meetingId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!orgId || !isGeneralforsamling(meetingType || "")) return;
+    const loadQuorum = async () => {
+      const [orgRes, medlRes] = await Promise.all([
+        supabase.from("organizations").select("quorum_naevner").eq("id", orgId).single(),
+        supabase.from("foreningsmedlemmer")
+          .select("id", { count: "exact", head: true })
+          .eq("org_id", orgId)
+          .eq("stemmeberettiget", true),
+      ]);
+      if (orgRes.data?.quorum_naevner) setQuorumNaevner(orgRes.data.quorum_naevner);
+      if (medlRes.count !== null) setForeningsmedlemmerAntal(medlRes.count);
+    };
+    loadQuorum();
+  }, [orgId, meetingType]);
 
   const toggleFremmoedt = async (approval: Approval) => {
     if (!kanRegistrere) return;
@@ -165,6 +186,39 @@ const ParticipantsTab = ({ meetingId, meetingStatus }: Props) => {
           </div>
         ))}
       </div>
+
+      {/* Quorum-sektion — kun GF-møder med foreningsmedlemmer */}
+      {isGeneralforsamling(meetingType || "") && foreningsmedlemmerAntal !== null && (() => {
+        const stemmeberettigede = foreningsmedlemmerAntal;
+        const kravAntal = Math.ceil(stemmeberettigede / quorumNaevner);
+        const fremmoedte = approvals.filter((a) => a.fremmoedt).length;
+        const opnaaet = fremmoedte >= kravAntal;
+        return (
+          <div className="border border-border rounded-sm p-3 space-y-2">
+            <p className="text-xs font-medium">Quorum</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p className="text-lg font-semibold">{stemmeberettigede}</p>
+                <p className="text-xs text-muted-foreground">Stemmeberettigede</p>
+              </div>
+              <div>
+                <p className="text-lg font-semibold">{fremmoedte}</p>
+                <p className="text-xs text-muted-foreground">Fremmødte</p>
+              </div>
+              <div>
+                <p className={`text-lg font-semibold ${opnaaet ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
+                  {opnaaet ? "Ja" : "Nej"}
+                </p>
+                <p className="text-xs text-muted-foreground">Quorum (min. {kravAntal})</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kræver mindst 1/{quorumNaevner} af stemmeberettigede ({kravAntal} personer).
+              Quorum-brøken kan ændres under Indstillinger → Forening.
+            </p>
+          </div>
+        );
+      })()}
 
       {kanRegistrere && (
         <p className="text-xs text-muted-foreground">

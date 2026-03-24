@@ -27,6 +27,8 @@ import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 import VedtaegterPage from "./pages/VedtaegterPage";
 import AuditLogPage from "./pages/AuditLogPage";
+import MedlemsregisterPage from "./pages/MedlemsregisterPage";
+import SharedReferatPage from "./pages/SharedReferatPage";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +71,10 @@ const App = () => (
           <Route path="/indstillinger/forening" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/indstillinger" element={<ProtectedLayout><OrgSettings /></ProtectedLayout>} />
           <Route path="/vedtaegter" element={<ProtectedLayout><VedtaegterPage /></ProtectedLayout>} />
+          <Route path="/foreningsmedlemmer" element={<ProtectedLayout><MedlemsregisterPage /></ProtectedLayout>} />
           <Route path="/overdrag-ejerskab/:token" element={<ProtectedLayout><OwnershipTransfer /></ProtectedLayout>} />
 
+          <Route path="/referat/:token" element={<SharedReferatPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

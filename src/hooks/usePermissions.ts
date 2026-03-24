@@ -14,6 +14,7 @@ export interface Permissions {
   kanAendreRoller: boolean;
   kanSeIndstillinger: boolean;
   kanRedigereForening: boolean;
+  kanAdministrereMedlemsregister: boolean;
   erFormand: boolean;
   erNaestformand: boolean;
   aktuelRolle: string;
@@ -34,6 +35,7 @@ const DEFAULT_PERMS: Permissions = {
   kanAendreRoller: false,
   kanSeIndstillinger: false,
   kanRedigereForening: false,
+  kanAdministrereMedlemsregister: false,
   erFormand: false,
   erNaestformand: false,
   aktuelRolle: "",
@@ -69,6 +71,7 @@ export function usePermissions(): Permissions {
     kanAendreRoller: perms?.kan_aendre_roller ?? false,
     kanSeIndstillinger: perms?.kan_se_indstillinger ?? false,
     kanRedigereForening: perms?.kan_redigere_forening ?? false,
+    kanAdministrereMedlemsregister: perms?.kan_administrere_medlemsregister ?? false,
     erFormand: memberRole === "formand",
     erNaestformand: memberRole === "naestformand",
     aktuelRolle: memberRole,
