@@ -159,13 +159,21 @@ const TeamSettings = () => {
 
   const handleRevokeInvite = async (member: Member) => {
     if (!perms.kanInvitereMedlemmer) { toast.error("Du har ikke tilladelse til at trække invitationer tilbage."); return; }
+    // Optimistisk: fjern straks fra UI
+    setMembers((prev) => prev.filter((m) => m.id !== member.id));
+    const { error } = await supabase.from("members").delete().eq("id", member.id);
+    if (error) {
+      // Rul UI tilbage hvis delete fejlede
+      fetchMembers();
+      toast.error("Kunne ikke trække invitationen tilbage.");
+      return;
+    }
     await logAuditEvent("member.invite_revoked", "member", member.id, {
       email: member.email,
       role: member.role,
       name: member.name,
     });
-    await supabase.from("members").delete().eq("id", member.id);
-    toast.success("Invitation trukket tilbage."); fetchMembers();
+    toast.success("Invitation trukket tilbage.");
   };
 
   const handleTransfer = async () => {

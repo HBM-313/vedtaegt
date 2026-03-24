@@ -14,7 +14,7 @@ import { formatDate, formatShortDate } from "@/lib/format";
 import { getRoleLabel } from "@/lib/roles";
 import { logAuditEvent } from "@/lib/audit";
 import { toast } from "sonner";
-import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell, Mail, Calendar } from "lucide-react";
+import { Play, SendHorizontal, CheckCircle, Download, Clock, AlertTriangle, Bell, Mail, Calendar, Trash2 } from "lucide-react";
 import { downloadICal } from "@/lib/ical";
 import AgendaMinutesTab from "@/components/meeting/AgendaMinutesTab";
 import ActionItemsTab from "@/components/meeting/ActionItemsTab";
@@ -321,6 +321,17 @@ const MeetingDetail = () => {
     }
   };
 
+  const handleRemoveFromApproval = async (approvalId: string, memberName: string) => {
+    if (!perms.erFormand) return;
+    const { error } = await supabase
+      .from("approvals")
+      .delete()
+      .eq("id", approvalId);
+    if (error) { toast.error("Kunne ikke fjerne godkender."); return; }
+    toast.success(`${memberName} er fjernet fra godkendelseslisten.`);
+    await loadApprovals();
+  };
+
   const handleSendReminder = async () => {
     setReminderLoading(true);
     try {
@@ -517,13 +528,24 @@ const MeetingDetail = () => {
                   )}
                   <span>{a.members?.name || "Ukendt"} ({getRoleLabel(a.members?.role || "")})</span>
                 </div>
-                <span className="text-muted-foreground text-xs">
-                  {a.status === "godkendt" && a.approved_at
-                    ? a.member_id === meeting.sendt_af
-                      ? "Godkendt automatisk (afsender)"
-                      : `Godkendt ${formatShortDate(a.approved_at)}`
-                    : "Afventer"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs">
+                    {a.status === "godkendt" && a.approved_at
+                      ? a.member_id === meeting.sendt_af
+                        ? "Godkendt automatisk (afsender)"
+                        : `Godkendt ${formatShortDate(a.approved_at)}`
+                      : "Afventer"}
+                  </span>
+                  {perms.erFormand && a.status === "afventer" && a.member_id !== meeting.sendt_af && (
+                    <button
+                      onClick={() => handleRemoveFromApproval(a.id, a.members?.name || "Ukendt")}
+                      title="Fjern fra godkendelseslisten"
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
