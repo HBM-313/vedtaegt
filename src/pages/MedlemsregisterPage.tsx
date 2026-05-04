@@ -90,12 +90,19 @@ const MedlemsregisterPage = () => {
   const load = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("foreningsmedlemmer")
-      .select("*")
-      .eq("org_id", orgId)
-      .order("navn", { ascending: true });
-    setMedlemmer((data as Foreningsmedlem[]) || []);
+    const { data, error } = await supabase
+      .rpc("list_foreningsmedlemmer", { _org_id: orgId });
+    if (error) {
+      // Fall back to non-sensitive columns if user lacks admin permission
+      const { data: basic } = await supabase
+        .from("foreningsmedlemmer")
+        .select("id, org_id, navn, tilmeldingsdato, stemmeberettiget, kontingentaar")
+        .eq("org_id", orgId)
+        .order("navn", { ascending: true });
+      setMedlemmer((basic as unknown as Foreningsmedlem[]) || []);
+    } else {
+      setMedlemmer((data as unknown as Foreningsmedlem[]) || []);
+    }
     setLoading(false);
   }, [orgId]);
 
