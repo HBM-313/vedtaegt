@@ -1165,6 +1165,17 @@ export type Database = {
         Returns: undefined
       }
       is_org_formand: { Args: { _org_id: string }; Returns: boolean }
+      start_meeting_approval: {
+        Args: { _frist_dage: number; _meeting_id: string }
+        Returns: {
+          approval_id: string
+          is_sender: boolean
+          member_email: string
+          member_id: string
+          member_name: string
+          token: string
+        }[]
+      }
       user_is_org_member: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
