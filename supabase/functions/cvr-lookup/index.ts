@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { cvr } = await req.json();
 
     if (!cvr || !/^\d{8}$/.test(String(cvr))) {
       return new Response(
