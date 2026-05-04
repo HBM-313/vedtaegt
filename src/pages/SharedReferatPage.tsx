@@ -87,7 +87,7 @@ const SharedReferatPage = () => {
     const { data: contentData } = await supabase
       .rpc("get_shared_meeting_content", { _token: tok });
     if (contentData) {
-      setContent(contentData as Content);
+      setContent(contentData as unknown as Content);
     }
     setLoading(false);
     setUnlocked(true);

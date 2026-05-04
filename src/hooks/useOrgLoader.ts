@@ -72,6 +72,7 @@ export async function fetchPermissions(
       kan_se_indstillinger: row.kan_se_indstillinger ?? false,
       kan_redigere_forening: row.kan_redigere_forening ?? false,
       arver_formand_ved_fravaer: row.arver_formand_ved_fravaer ?? false,
+      kan_administrere_medlemsregister: row.kan_administrere_medlemsregister ?? false,
     };
   });
   return map;
