@@ -248,7 +248,7 @@ function renderTemplate(templateName: string, rawData: TemplateData): { subject:
     case "gf_indkaldelse": {
       const agendaHtml = Array.isArray(data.agendaItems)
         ? `<ol style="font-size:14px;color:#374151;padding-left:20px;margin:12px 0;">
-            ${(data.agendaItems as Array<{title: string}>).map(a => `<li style="margin-bottom:4px;">${a.title}</li>`).join("")}
+            ${(rawData.agendaItems as Array<{title: string}> | undefined || []).map(a => `<li style="margin-bottom:4px;">${escHtml(a.title)}</li>`).join("")}
           </ol>`
         : "";
       return {
