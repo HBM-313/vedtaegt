@@ -132,9 +132,10 @@ Deno.serve(async (req) => {
 
     // Send invitation email with token link
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    const INTERNAL_TOKEN_FOR_SEND_EMAIL = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const emailRes = await fetch(sendEmailUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-internal-token": INTERNAL_TOKEN_FOR_SEND_EMAIL },
       body: JSON.stringify({
         to: email,
         templateName: "invitation",

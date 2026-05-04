@@ -62,41 +62,20 @@ const InvitationAccept = () => {
     const loadInvitation = async () => {
       if (!token) { setExpired(true); setLoading(false); return; }
 
-      // Find member by invitation_token
-      const { data: member, error } = await supabase
-        .from("members")
-        .select("id, email, role, org_id, invitation_token_expires_at")
-        .eq("invitation_token", token)
-        .maybeSingle();
+      // Look up invitation via secure RPC (token-validated server-side)
+      const { data: rows, error } = await supabase
+        .rpc("get_invitation_by_token", { _token: token });
 
-      if (error || !member) { setExpired(true); setLoading(false); return; }
-
-      // Check expiration
-      if (member.invitation_token_expires_at && new Date(member.invitation_token_expires_at) < new Date()) {
-        setExpired(true); setLoading(false); return;
-      }
-
-      // Get org name
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", member.org_id!)
-        .single();
-
-      // Get formand name
-      const { data: formand } = await supabase
-        .from("members")
-        .select("name")
-        .eq("org_id", member.org_id!)
-        .eq("role", "formand")
-        .maybeSingle();
+      const inv = Array.isArray(rows) ? rows[0] : null;
+      if (error || !inv) { setExpired(true); setLoading(false); return; }
+      if (inv.expired) { setExpired(true); setLoading(false); return; }
 
       setInvitation({
-        memberId: member.id,
-        email: member.email,
-        role: member.role,
-        orgName: org?.name || "Ukendt forening",
-        formandName: formand?.name || "Formanden",
+        memberId: inv.member_id,
+        email: inv.email,
+        role: inv.role,
+        orgName: inv.org_name || "Ukendt forening",
+        formandName: inv.formand_name || "Formanden",
       });
       setLoading(false);
     };
@@ -132,26 +111,20 @@ const InvitationAccept = () => {
         setSubmitting(false); return;
       }
 
-      // 2. Update the member record — use the service through an edge function
-      // Since we might not have a session yet (email unconfirmed), we update via the anon policy
-      const { error: updateError } = await supabase
-        .from("members")
-        .update({
-          user_id: authData.user.id,
-          name: name.trim(),
-          telefon: telefon.trim(),
-          foedselsdato: foedselsdato || null,
-          adresse: adresse.trim() || null,
-          postnummer: postnummer.trim() || null,
-          by: by_.trim() || null,
-          joined_at: new Date().toISOString(),
-          invitation_token: null,
-          invitation_token_expires_at: null,
-          email_bekraeftet: false,
-        } as any)
-        .eq("invitation_token", token);
+      // 2. Accept invitation via secure RPC (token-validated, only updates the matching row)
+      const { data: ok, error: updateError } = await supabase.rpc("accept_invitation", {
+        _token: token,
+        _user_id: authData.user.id,
+        _name: name.trim(),
+        _telefon: telefon.trim() || null,
+        _foedselsdato: foedselsdato || null,
+        _adresse: adresse.trim() || null,
+        _postnummer: postnummer.trim() || null,
+        _by: by_.trim() || null,
+      });
 
       if (updateError) throw updateError;
+      if (!ok) throw new Error("Invitationen er udløbet eller ugyldig.");
 
       // Store email for resend
       localStorage.setItem("vedtaegt_invitation_email", invitation.email);
