@@ -18,35 +18,44 @@ export type Database = {
         Row: {
           agenda_item_id: string | null
           assigned_to: string | null
+          beskrivelse: string | null
           created_at: string | null
           due_date: string | null
           id: string
           meeting_id: string | null
           org_id: string | null
           status: string | null
+          statusnote: string | null
           title: string
+          updated_at: string | null
         }
         Insert: {
           agenda_item_id?: string | null
           assigned_to?: string | null
+          beskrivelse?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
           meeting_id?: string | null
           org_id?: string | null
           status?: string | null
+          statusnote?: string | null
           title: string
+          updated_at?: string | null
         }
         Update: {
           agenda_item_id?: string | null
           assigned_to?: string | null
+          beskrivelse?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
           meeting_id?: string | null
           org_id?: string | null
           status?: string | null
+          statusnote?: string | null
           title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -216,6 +225,8 @@ export type Database = {
         Row: {
           afvist_kommentar: string | null
           approved_at: string | null
+          fremmoedt: boolean | null
+          fremmoedt_registreret_at: string | null
           id: string
           ip_address: string | null
           meeting_id: string | null
@@ -231,6 +242,8 @@ export type Database = {
         Insert: {
           afvist_kommentar?: string | null
           approved_at?: string | null
+          fremmoedt?: boolean | null
+          fremmoedt_registreret_at?: string | null
           id?: string
           ip_address?: string | null
           meeting_id?: string | null
@@ -246,6 +259,8 @@ export type Database = {
         Update: {
           afvist_kommentar?: string | null
           approved_at?: string | null
+          fremmoedt?: boolean | null
+          fremmoedt_registreret_at?: string | null
           id?: string
           ip_address?: string | null
           meeting_id?: string | null
@@ -464,6 +479,74 @@ export type Database = {
           },
         ]
       }
+      foreningsmedlemmer: {
+        Row: {
+          adresse: string | null
+          by: string | null
+          created_at: string
+          email: string | null
+          foedselsdato: string | null
+          id: string
+          kontingent_beloeb: number | null
+          kontingent_status: string
+          kontingentaar: number
+          navn: string
+          noter: string | null
+          org_id: string
+          postnummer: string | null
+          stemmeberettiget: boolean
+          telefon: string | null
+          tilmeldingsdato: string
+          updated_at: string
+        }
+        Insert: {
+          adresse?: string | null
+          by?: string | null
+          created_at?: string
+          email?: string | null
+          foedselsdato?: string | null
+          id?: string
+          kontingent_beloeb?: number | null
+          kontingent_status?: string
+          kontingentaar?: number
+          navn: string
+          noter?: string | null
+          org_id: string
+          postnummer?: string | null
+          stemmeberettiget?: boolean
+          telefon?: string | null
+          tilmeldingsdato?: string
+          updated_at?: string
+        }
+        Update: {
+          adresse?: string | null
+          by?: string | null
+          created_at?: string
+          email?: string | null
+          foedselsdato?: string | null
+          id?: string
+          kontingent_beloeb?: number | null
+          kontingent_status?: string
+          kontingentaar?: number
+          navn?: string
+          noter?: string | null
+          org_id?: string
+          postnummer?: string | null
+          stemmeberettiget?: boolean
+          telefon?: string | null
+          tilmeldingsdato?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "foreningsmedlemmer_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meetings: {
         Row: {
           afvist_af: string | null
@@ -480,6 +563,9 @@ export type Database = {
           meeting_type: string
           org_id: string | null
           sendt_af: string | null
+          share_aktiv: boolean
+          share_pin_hash: string | null
+          share_token: string | null
           status: string | null
           title: string
         }
@@ -498,6 +584,9 @@ export type Database = {
           meeting_type?: string
           org_id?: string | null
           sendt_af?: string | null
+          share_aktiv?: boolean
+          share_pin_hash?: string | null
+          share_token?: string | null
           status?: string | null
           title: string
         }
@@ -516,6 +605,9 @@ export type Database = {
           meeting_type?: string
           org_id?: string | null
           sendt_af?: string | null
+          share_aktiv?: boolean
+          share_pin_hash?: string | null
+          share_token?: string | null
           status?: string | null
           title?: string
         }
@@ -706,6 +798,7 @@ export type Database = {
           permission_version: number | null
           plan: string
           postnummer: string | null
+          quorum_naevner: number
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
@@ -727,6 +820,7 @@ export type Database = {
           permission_version?: number | null
           plan?: string
           postnummer?: string | null
+          quorum_naevner?: number
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
@@ -748,6 +842,7 @@ export type Database = {
           permission_version?: number | null
           plan?: string
           postnummer?: string | null
+          quorum_naevner?: number
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
@@ -807,6 +902,7 @@ export type Database = {
         Row: {
           arver_formand_ved_fravaer: boolean | null
           id: string
+          kan_administrere_medlemsregister: boolean | null
           kan_aendre_roller: boolean | null
           kan_fjerne_medlemmer: boolean | null
           kan_godkende_referat: boolean | null
@@ -827,6 +923,7 @@ export type Database = {
         Insert: {
           arver_formand_ved_fravaer?: boolean | null
           id?: string
+          kan_administrere_medlemsregister?: boolean | null
           kan_aendre_roller?: boolean | null
           kan_fjerne_medlemmer?: boolean | null
           kan_godkende_referat?: boolean | null
@@ -847,6 +944,7 @@ export type Database = {
         Update: {
           arver_formand_ved_fravaer?: boolean | null
           id?: string
+          kan_administrere_medlemsregister?: boolean | null
           kan_aendre_roller?: boolean | null
           kan_fjerne_medlemmer?: boolean | null
           kan_godkende_referat?: boolean | null
@@ -1005,6 +1103,22 @@ export type Database = {
           role: string
         }[]
       }
+      get_meeting_by_share_token: {
+        Args: { _token: string }
+        Returns: {
+          approved_at: string
+          godkendelse_runde: number
+          id: string
+          location: string
+          meeting_date: string
+          meeting_type: string
+          org_id: string
+          share_pin_hash: string
+          status: string
+          title: string
+        }[]
+      }
+      get_shared_meeting_content: { Args: { _token: string }; Returns: Json }
       insert_default_permissions: {
         Args: { p_org_id: string }
         Returns: undefined
