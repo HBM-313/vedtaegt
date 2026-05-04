@@ -39,16 +39,13 @@ const Profile = () => {
   const [role, setRole] = useState("");
 
   const fetchProfile = useCallback(async () => {
-    if (!memberId) return;
+    if (!memberId || !orgId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("members")
-      .select("name, email, role, telefon, adresse, postnummer, by, foedselsdato")
-      .eq("id", memberId)
-      .single();
+    const { data } = await supabase.rpc("get_my_member_profile", { _org_id: orgId });
+    const row = Array.isArray(data) ? data[0] : null;
 
-    if (data) {
-      const d = data as any;
+    if (row) {
+      const d = row as any;
       setName(d.name || "");
       setEmail(d.email || "");
       setTelefon(d.telefon || "");
@@ -59,7 +56,7 @@ const Profile = () => {
       setRole(d.role || "");
     }
     setLoading(false);
-  }, [memberId]);
+  }, [memberId, orgId]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
