@@ -127,52 +127,15 @@ const MeetingDetail = () => {
     if (!meeting || !id) return;
     setStatusLoading(true);
     try {
-      const runde = (meeting.godkendelse_runde || 1) + (meeting.status === "active" && meeting.afvist_at ? 1 : 0);
-      const actualRunde = meeting.afvist_at ? runde : (meeting.godkendelse_runde || 1);
+      // Server-side: permission check, status update, approval row creation,
+      // sender auto-approve, and audit logging — all enforced in the RPC.
+      const { data: dispatchRows, error: rpcErr } = await supabase
+        .rpc("start_meeting_approval", {
+          _meeting_id: id,
+          _frist_dage: fristDage,
+        });
 
-      await supabase.from("meetings").update({
-        status: "pending_approval",
-        godkendelse_frist_dage: fristDage,
-        godkendelse_runde: actualRunde,
-        afvist_af: null,
-        afvist_at: null,
-        afvist_kommentar: null,
-        sendt_af: memberId,
-      }).eq("id", id);
-
-      await supabase.from("approvals").delete().eq("meeting_id", id).eq("status", "afventer");
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-
-      const newApprovals = members.map((m) => ({
-        meeting_id: id,
-        org_id: orgId,
-        member_id: m.id,
-        status: "afventer",
-        token: crypto.randomUUID(),
-        token_expires_at: expiresAt.toISOString(),
-        sendt_at: new Date().toISOString(),
-        paamindelse_efter_dage: fristDage,
-      }));
-
-      await supabase.from("approvals").insert(newApprovals);
-
-      if (memberId) {
-        const senderApproval = newApprovals.find(a => a.member_id === memberId);
-        if (senderApproval) {
-          await supabase.from("approvals").update({
-            status: "godkendt",
-            approved_at: new Date().toISOString(),
-          }).eq("meeting_id", id).eq("member_id", memberId).eq("status", "afventer");
-
-          await logAuditEvent("meeting.referat_godkendt", "meeting", id, {
-            member_id: memberId,
-            kilde: "auto_afsender",
-            runde: actualRunde,
-          });
-        }
-      }
+      if (rpcErr) throw rpcErr;
 
       const meetingDate = meeting.meeting_date
         ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
@@ -181,23 +144,32 @@ const MeetingDetail = () => {
       const { data: senderMember } = await supabase.from("members")
         .select("name, email").eq("org_id", orgId!).eq("role", "formand").limit(1).single();
 
+      const rows = (dispatchRows || []) as Array<{
+        approval_id: string;
+        member_id: string;
+        member_name: string;
+        member_email: string;
+        token: string;
+        is_sender: boolean;
+      }>;
+
       let emailWarningShown = false;
-      for (const approval of newApprovals) {
-        const member = members.find((m) => m.id === approval.member_id);
-        if (!member || member.id === memberId) continue;
+      let recipientCount = 0;
+      for (const row of rows) {
+        if (row.is_sender || !row.member_email) continue;
+        recipientCount++;
         const { data: emailResult } = await supabase.functions.invoke("send-email", {
           body: {
-            to: member.email,
+            to: row.member_email,
             templateName: "approval_request",
             templateData: {
               meetingTitle: meeting.title,
               meetingDate,
-              token: approval.token,
-              recipientName: member.name,
+              token: row.token,
+              recipientName: row.member_name,
               senderName: senderMember?.name || "Formanden",
               senderEmail: senderMember?.email || "",
               orgName: orgName || "",
-              runde: actualRunde,
             },
           },
         });
@@ -207,13 +179,7 @@ const MeetingDetail = () => {
         }
       }
 
-      await logAuditEvent("meeting.sent_for_approval", "meeting", id, {
-        antal_modtagere: members.length,
-        frist_dage: fristDage,
-        runde: actualRunde,
-      });
-
-      toast.success(`Sendt til godkendelse hos ${members.length} medlemmer.`);
+      toast.success(`Sendt til godkendelse hos ${recipientCount} medlemmer.`);
       setShowSendModal(false);
       await loadMeeting();
       await loadApprovals();
