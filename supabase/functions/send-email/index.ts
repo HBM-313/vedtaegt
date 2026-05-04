@@ -187,11 +187,11 @@ function renderTemplate(templateName: string, rawData: TemplateData): { subject:
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Rolle</th>
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Tidspunkt</th>
     </tr>
-    ${(data.approvals as Array<{name: string; role: string; date: string}>).map((a) => `
+    ${(rawData.approvals as Array<{name: string; role: string; date: string}> | undefined || []).map((a) => `
     <tr style="border-bottom:1px solid #f1f5f9;">
-      <td style="padding:8px 0;font-size:13px;color:#0f172a;">${a.name}</td>
-      <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.role}</td>
-      <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.date}</td>
+      <td style="padding:8px 0;font-size:13px;color:#0f172a;">${escHtml(a.name)}</td>
+      <td style="padding:8px 0;font-size:13px;color:#64748b;">${escHtml(a.role)}</td>
+      <td style="padding:8px 0;font-size:13px;color:#64748b;">${escHtml(a.date)}</td>
     </tr>`).join("")}
   </table>` : ""}
   <a href="${BASE_URL}/moeder/${data.meetingId}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
