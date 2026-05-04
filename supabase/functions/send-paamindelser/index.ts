@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     let remindersSent = 0;
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    const INTERNAL_TOKEN_FOR_SEND_EMAIL = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
     for (const approval of pendingApprovals) {
       const dage = approval.paamindelse_efter_dage || 3;
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
 
       await fetch(sendEmailUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-internal-token": INTERNAL_TOKEN_FOR_SEND_EMAIL },
         body: JSON.stringify({
           to: member.email,
           templateName: "approval_reminder",

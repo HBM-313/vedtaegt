@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
 
     // Send approval request emails to each member
     const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
+    const INTERNAL_TOKEN_FOR_SEND_EMAIL = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const meetingDate = meeting.meeting_date
       ? new Intl.DateTimeFormat("da-DK", { day: "numeric", month: "long", year: "numeric" }).format(new Date(meeting.meeting_date))
       : "ukendt dato";
@@ -127,7 +128,7 @@ Deno.serve(async (req) => {
 
       await fetch(sendEmailUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-internal-token": INTERNAL_TOKEN_FOR_SEND_EMAIL },
         body: JSON.stringify({
           to: member.email,
           templateName: "approval_request",
