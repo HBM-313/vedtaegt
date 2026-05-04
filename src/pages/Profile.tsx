@@ -23,7 +23,7 @@ const ROLE_BADGE_STYLES: Record<string, string> = {
 };
 
 const Profile = () => {
-  const { memberId } = useOrg();
+  const { memberId, orgId } = useOrg();
   const perms = usePermissions();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
