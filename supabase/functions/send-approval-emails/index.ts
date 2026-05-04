@@ -46,6 +46,67 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Server-side permission check: caller must be a member of the meeting's org
+    // and have kan_sende_til_godkendelse=true. Honor naestformand-vikariat
+    // (inherits formand permissions when formand is absent).
+    const { data: meetingForAuth } = await supabase
+      .from("meetings")
+      .select("org_id")
+      .eq("id", meeting_id)
+      .single();
+    if (!meetingForAuth) {
+      return new Response(JSON.stringify({ error: "Meeting not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const orgIdForAuth = meetingForAuth.org_id;
+
+    const { data: callerMember } = await supabase
+      .from("members")
+      .select("role")
+      .eq("org_id", orgIdForAuth)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!callerMember) {
+      return new Response(JSON.stringify({ error: "Forbidden: not a member of this organization" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let effectiveRole: string = callerMember.role;
+    if (effectiveRole === "naestformand") {
+      const { data: perm } = await supabase
+        .from("role_permissions")
+        .select("arver_formand_ved_fravaer")
+        .eq("org_id", orgIdForAuth)
+        .eq("role", "naestformand")
+        .maybeSingle();
+      if (perm?.arver_formand_ved_fravaer) {
+        const { data: formand } = await supabase
+          .from("members")
+          .select("er_fravaerende")
+          .eq("org_id", orgIdForAuth)
+          .eq("role", "formand")
+          .maybeSingle();
+        if (formand?.er_fravaerende) effectiveRole = "formand";
+      }
+    }
+
+    const { data: rolePerm } = await supabase
+      .from("role_permissions")
+      .select("kan_sende_til_godkendelse")
+      .eq("org_id", orgIdForAuth)
+      .eq("role", effectiveRole)
+      .maybeSingle();
+    if (!rolePerm?.kan_sende_til_godkendelse) {
+      return new Response(JSON.stringify({ error: "Forbidden: du har ikke tilladelse til at sende referatet til godkendelse." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get meeting
     const { data: meeting } = await supabase
       .from("meetings")
