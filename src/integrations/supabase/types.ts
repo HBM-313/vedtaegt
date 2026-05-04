@@ -1113,12 +1113,15 @@ export type Database = {
           meeting_date: string
           meeting_type: string
           org_id: string
-          share_pin_hash: string
+          pin_required: boolean
           status: string
           title: string
         }[]
       }
-      get_shared_meeting_content: { Args: { _token: string }; Returns: Json }
+      get_shared_meeting_content: {
+        Args: { _pin?: string; _token: string }
+        Returns: Json
+      }
       insert_default_permissions: {
         Args: { p_org_id: string }
         Returns: undefined

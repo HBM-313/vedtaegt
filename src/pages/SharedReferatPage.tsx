@@ -14,7 +14,7 @@ interface Meeting {
   location: string | null;
   status: string;
   meeting_type: string | null;
-  share_pin_hash: string | null;
+  pin_required: boolean;
   approved_at: string | null;
   godkendelse_runde: number | null;
 }
@@ -48,6 +48,7 @@ const SharedReferatPage = () => {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (!token) { setNotFound(true); setLoading(false); return; }
@@ -55,59 +56,62 @@ const SharedReferatPage = () => {
       const { data: meetings } = await supabase
         .rpc("get_meeting_by_share_token", { _token: token });
       if (!meetings || meetings.length === 0) { setNotFound(true); setLoading(false); return; }
-      const m = meetings[0] as Meeting;
+      const m = meetings[0] as unknown as Meeting;
       setMeeting(m);
 
-      if (m.share_pin_hash) {
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", m.org_id)
+        .maybeSingle();
+      setOrgName(org?.name || "");
+
+      if (m.pin_required) {
         setPinRequired(true);
         setLoading(false);
         return;
       }
 
-      await loadContent(token);
+      await loadContent(token, null);
     };
     load();
   }, [token]);
 
-  const loadContent = async (tok: string) => {
-    const { data: meetingRows } = await supabase
-      .rpc("get_meeting_by_share_token", { _token: tok });
-    if (meetingRows?.[0]) {
-      const m = meetingRows[0] as Meeting;
-      setMeeting(m);
-      // Hent org-navn
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", m.org_id)
-        .single();
-      setOrgName(org?.name || "");
+  const loadContent = async (tok: string, pin: string | null): Promise<"ok" | "invalid_pin" | "error"> => {
+    const { data: contentData, error } = await supabase
+      .rpc("get_shared_meeting_content", { _token: tok, _pin: pin });
+
+    if (error) {
+      setLoading(false);
+      return "error";
     }
 
-    const { data: contentData } = await supabase
-      .rpc("get_shared_meeting_content", { _token: tok });
+    // Server returns { error: 'pin_required' | 'invalid_pin' } when PIN check fails
+    if (contentData && typeof contentData === "object" && !Array.isArray(contentData) && (contentData as { error?: string }).error) {
+      setLoading(false);
+      return "invalid_pin";
+    }
+
     if (contentData) {
       setContent(contentData as unknown as Content);
     }
     setLoading(false);
     setUnlocked(true);
+    return "ok";
   };
 
   const handlePinSubmit = async () => {
-    if (!meeting || !token) return;
-    // Simpel hash-sammenligning: vi bruger SHA-256 af PIN via Web Crypto
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pinInput);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
-    if (hashHex === meeting.share_pin_hash) {
-      setPinError(false);
-      await loadContent(token);
-    } else {
+    if (!meeting || !token || verifying) return;
+    setVerifying(true);
+    const result = await loadContent(token, pinInput);
+    setVerifying(false);
+    if (result === "invalid_pin") {
       setPinError(true);
       setPinInput("");
+    } else if (result === "error") {
+      setPinError(true);
+    } else {
+      setPinError(false);
     }
   };
 
@@ -156,8 +160,8 @@ const SharedReferatPage = () => {
               />
               {pinError && <p className="text-xs text-destructive">Forkert PIN-kode. Prøv igen.</p>}
             </div>
-            <Button className="w-full" onClick={handlePinSubmit} disabled={pinInput.length < 4}>
-              Åbn referat
+            <Button className="w-full" onClick={handlePinSubmit} disabled={pinInput.length < 4 || verifying}>
+              {verifying ? "Kontrollerer..." : "Åbn referat"}
             </Button>
           </div>
         </div>
