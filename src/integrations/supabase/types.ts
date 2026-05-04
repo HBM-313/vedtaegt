@@ -975,10 +975,36 @@ export type Database = {
       }
     }
     Functions: {
+      accept_invitation: {
+        Args: {
+          _adresse?: string
+          _by?: string
+          _foedselsdato?: string
+          _name: string
+          _postnummer?: string
+          _telefon?: string
+          _token: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      get_invitation_by_token: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expired: boolean
+          formand_name: string
+          member_id: string
+          org_id: string
+          org_name: string
+          role: string
+        }[]
+      }
       insert_default_permissions: {
         Args: { p_org_id: string }
         Returns: undefined
       }
+      is_org_formand: { Args: { _org_id: string }; Returns: boolean }
       user_is_org_member: { Args: { _org_id: string }; Returns: boolean }
     }
     Enums: {
