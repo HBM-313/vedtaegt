@@ -29,8 +29,31 @@ function getRoleLabelDa(role: string): string {
   return map[role] || role;
 }
 
-function renderTemplate(templateName: string, data: TemplateData): { subject: string; html: string } {
+function escHtml(s: unknown): string {
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeData(data: TemplateData): TemplateData {
+  return new Proxy(data, {
+    get(target, prop: string) {
+      const v = (target as Record<string, unknown>)[prop];
+      if (v === null || v === undefined) return "";
+      // Preserve arrays/objects/booleans/numbers untouched (templates handle them explicitly)
+      if (typeof v === "string") return escHtml(v);
+      return v;
+    },
+  });
+}
+
+function renderTemplate(templateName: string, rawData: TemplateData): { subject: string; html: string } {
   const BASE_URL = getBaseUrl();
+  const data = escapeData(rawData);
 
   switch (templateName) {
     case "invitation": {
