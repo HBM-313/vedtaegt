@@ -15,17 +15,44 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Require an internal token (service-role key) — this function must only be
-    // callable by trusted server-side schedulers (pg_cron / external cron).
+    if (!supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Require an internal token. Accept either:
+    //   1) the dedicated CRON_PAAMINDELSER_TOKEN stored in vault (used by pg_cron), or
+    //   2) the service role key (for manual/admin invocations).
     const internalToken = req.headers.get("x-internal-token");
-    if (!supabaseServiceKey || internalToken !== supabaseServiceKey) {
+    if (!internalToken) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    let authorized = internalToken === supabaseServiceKey;
+    if (!authorized) {
+      const { data: secretRow } = await supabase
+        .schema("vault")
+        .from("decrypted_secrets")
+        .select("decrypted_secret")
+        .eq("name", "CRON_PAAMINDELSER_TOKEN")
+        .maybeSingle();
+      const cronToken = (secretRow as { decrypted_secret?: string } | null)?.decrypted_secret;
+      authorized = !!cronToken && internalToken === cronToken;
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Find approvals that need a reminder:
     // status = 'afventer' AND
