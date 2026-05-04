@@ -1118,6 +1118,44 @@ export type Database = {
           title: string
         }[]
       }
+      get_my_member_profile: {
+        Args: { _org_id: string }
+        Returns: {
+          adresse: string
+          by: string
+          email: string
+          foedselsdato: string
+          id: string
+          marketing_consent: boolean
+          marketing_consent_at: string
+          name: string
+          org_id: string
+          postnummer: string
+          role: string
+          telefon: string
+        }[]
+      }
+      get_ownership_transfer_by_token: {
+        Args: { _token: string }
+        Returns: {
+          accepted_at: string
+          expires_at: string
+          from_member_id: string
+          id: string
+          org_id: string
+          to_email: string
+        }[]
+      }
+      get_pending_approval_tokens: {
+        Args: { _meeting_id: string }
+        Returns: {
+          approval_id: string
+          member_email: string
+          member_id: string
+          member_name: string
+          token: string
+        }[]
+      }
       get_shared_meeting_content: {
         Args: { _pin?: string; _token: string }
         Returns: Json

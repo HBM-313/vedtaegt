@@ -37,23 +37,15 @@ const OwnershipTransfer = () => {
         return;
       }
 
-      const { data: t } = await supabase
-        .from("ownership_transfers")
-        .select("id, org_id, from_member_id, to_email, expires_at, accepted_at")
-        .eq("token", token)
-        .single();
+      const { data: rows } = await supabase
+        .rpc("get_ownership_transfer_by_token", { _token: token });
+      const t = Array.isArray(rows) ? rows[0] : null;
 
-      if (!t) { setError("Overdragelseslinket er ugyldigt."); setLoading(false); return; }
+      if (!t) { setError("Overdragelseslinket er ugyldigt eller ikke til din e-mailadresse."); setLoading(false); return; }
       if (t.accepted_at) { setError("Ejerskabet er allerede overdraget."); setLoading(false); return; }
       if (new Date(t.expires_at!) < new Date()) { setError("Linket er udløbet."); setLoading(false); return; }
 
-      // Verify current user's email matches
-      if (user.email !== t.to_email) {
-        setError("Dette link er ikke til din e-mailadresse.");
-        setLoading(false);
-        return;
-      }
-
+      // Email match is verified server-side by the RPC.
       setTransfer(t);
 
       // Fetch org name and from member name
