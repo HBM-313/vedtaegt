@@ -14,6 +14,17 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Require an internal token (service-role key) — this function must only be
+    // callable by trusted server-side schedulers (pg_cron / external cron).
+    const internalToken = req.headers.get("x-internal-token");
+    if (!supabaseServiceKey || internalToken !== supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Find approvals that need a reminder:
