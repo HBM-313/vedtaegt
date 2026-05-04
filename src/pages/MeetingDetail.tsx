@@ -335,34 +335,39 @@ const MeetingDetail = () => {
   const handleSendReminder = async () => {
     setReminderLoading(true);
     try {
-      const { data: pendingWithTokens } = await supabase.from("approvals")
-        .select("id, token, member_id, members!approvals_member_id_fkey(name, email)")
-        .eq("meeting_id", id!)
-        .eq("status", "afventer")
-        .neq("member_id", meeting?.sendt_af || "");
+      const { data: pendingWithTokens, error: rpcErr } = await supabase
+        .rpc("get_pending_approval_tokens", { _meeting_id: id! });
 
-      if (!pendingWithTokens) throw new Error("Ingen afventende godkendelser.");
+      if (rpcErr) throw rpcErr;
+      if (!pendingWithTokens || pendingWithTokens.length === 0) {
+        throw new Error("Ingen afventende godkendelser.");
+      }
 
       const total = approvals.length;
       const done = approvals.filter((a) => a.status === "godkendt").length;
 
-      for (const a of pendingWithTokens) {
-        const member = a.members as { name: string; email: string } | null;
-        if (!member?.email || !a.token) continue;
+      for (const a of pendingWithTokens as Array<{
+        approval_id: string;
+        token: string;
+        member_id: string;
+        member_name: string;
+        member_email: string;
+      }>) {
+        if (!a.member_email || !a.token) continue;
         await supabase.functions.invoke("send-email", {
           body: {
-            to: member.email,
+            to: a.member_email,
             templateName: "approval_reminder",
             templateData: {
               meetingTitle: meeting!.title,
               token: a.token,
-              recipientName: member.name,
+              recipientName: a.member_name,
               approvedCount: done,
               totalCount: total,
             },
           },
         });
-        await supabase.from("approvals").update({ paamindelse_sendt_at: new Date().toISOString() }).eq("id", a.id);
+        await supabase.from("approvals").update({ paamindelse_sendt_at: new Date().toISOString() }).eq("id", a.approval_id);
       }
 
       await logAuditEvent("meeting.paamindelse_sendt", "meeting", id!, { antal: pendingWithTokens.length });
