@@ -1091,6 +1091,13 @@ export type Database = {
         Args: { _flag: string; _org_id: string }
         Returns: boolean
       }
+      get_foreningsmedlem_emails: {
+        Args: { _org_id: string }
+        Returns: {
+          email: string
+          navn: string
+        }[]
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
@@ -1165,6 +1172,34 @@ export type Database = {
         Returns: undefined
       }
       is_org_formand: { Args: { _org_id: string }; Returns: boolean }
+      list_foreningsmedlemmer: {
+        Args: { _org_id: string }
+        Returns: {
+          adresse: string | null
+          by: string | null
+          created_at: string
+          email: string | null
+          foedselsdato: string | null
+          id: string
+          kontingent_beloeb: number | null
+          kontingent_status: string
+          kontingentaar: number
+          navn: string
+          noter: string | null
+          org_id: string
+          postnummer: string | null
+          stemmeberettiget: boolean
+          telefon: string | null
+          tilmeldingsdato: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "foreningsmedlemmer"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       start_meeting_approval: {
         Args: { _frist_dage: number; _meeting_id: string }
         Returns: {

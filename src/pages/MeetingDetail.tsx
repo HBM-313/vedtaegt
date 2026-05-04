@@ -202,7 +202,7 @@ const MeetingDetail = () => {
               .not("user_id", "is", null).eq("email_bekraeftet", true)
           : Promise.resolve({ data: [] }),
         (indkaldelseMaalgruppe === "foreningsmedlemmer" || indkaldelseMaalgruppe === "begge")
-          ? supabase.from("foreningsmedlemmer").select("navn, email").eq("org_id", orgId).not("email", "is", null)
+          ? supabase.rpc("get_foreningsmedlem_emails", { _org_id: orgId })
           : Promise.resolve({ data: [] }),
       ]);
 

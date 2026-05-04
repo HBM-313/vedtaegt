@@ -29,8 +29,31 @@ function getRoleLabelDa(role: string): string {
   return map[role] || role;
 }
 
-function renderTemplate(templateName: string, data: TemplateData): { subject: string; html: string } {
+function escHtml(s: unknown): string {
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeData(data: TemplateData): TemplateData {
+  return new Proxy(data, {
+    get(target, prop: string) {
+      const v = (target as Record<string, unknown>)[prop];
+      if (v === null || v === undefined) return "";
+      // Preserve arrays/objects/booleans/numbers untouched (templates handle them explicitly)
+      if (typeof v === "string") return escHtml(v);
+      return v;
+    },
+  });
+}
+
+function renderTemplate(templateName: string, rawData: TemplateData): { subject: string; html: string } {
   const BASE_URL = getBaseUrl();
+  const data = escapeData(rawData);
 
   switch (templateName) {
     case "invitation": {
@@ -164,11 +187,11 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Rolle</th>
       <th style="text-align:left;padding:8px 0;font-size:12px;color:#64748b;">Tidspunkt</th>
     </tr>
-    ${(data.approvals as Array<{name: string; role: string; date: string}>).map((a) => `
+    ${(rawData.approvals as Array<{name: string; role: string; date: string}> | undefined || []).map((a) => `
     <tr style="border-bottom:1px solid #f1f5f9;">
-      <td style="padding:8px 0;font-size:13px;color:#0f172a;">${a.name}</td>
-      <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.role}</td>
-      <td style="padding:8px 0;font-size:13px;color:#64748b;">${a.date}</td>
+      <td style="padding:8px 0;font-size:13px;color:#0f172a;">${escHtml(a.name)}</td>
+      <td style="padding:8px 0;font-size:13px;color:#64748b;">${escHtml(a.role)}</td>
+      <td style="padding:8px 0;font-size:13px;color:#64748b;">${escHtml(a.date)}</td>
     </tr>`).join("")}
   </table>` : ""}
   <a href="${BASE_URL}/moeder/${data.meetingId}" style="display:inline-block;background:#1e40af;color:#fff;padding:14px 32px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none;">
@@ -225,7 +248,7 @@ function renderTemplate(templateName: string, data: TemplateData): { subject: st
     case "gf_indkaldelse": {
       const agendaHtml = Array.isArray(data.agendaItems)
         ? `<ol style="font-size:14px;color:#374151;padding-left:20px;margin:12px 0;">
-            ${(data.agendaItems as Array<{title: string}>).map(a => `<li style="margin-bottom:4px;">${a.title}</li>`).join("")}
+            ${(rawData.agendaItems as Array<{title: string}> | undefined || []).map(a => `<li style="margin-bottom:4px;">${escHtml(a.title)}</li>`).join("")}
           </ol>`
         : "";
       return {
