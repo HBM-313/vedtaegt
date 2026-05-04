@@ -988,6 +988,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      caller_effective_role: { Args: { _org_id: string }; Returns: string }
+      caller_has_permission: {
+        Args: { _flag: string; _org_id: string }
+        Returns: boolean
+      }
       get_invitation_by_token: {
         Args: { _token: string }
         Returns: {
