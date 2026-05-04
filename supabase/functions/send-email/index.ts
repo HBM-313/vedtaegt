@@ -262,6 +262,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Internal-only: require shared secret header from trusted callers
+    // (other edge functions). Prevents anonymous callers from abusing
+    // our Resend quota or sending phishing emails from the platform domain.
+    const internalToken = req.headers.get("x-internal-token");
+    const expected = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!expected || internalToken !== expected) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
