@@ -5,6 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, Link } from "react-router-dom";
+import PageSeo from "@/components/PageSeo";
 
 const features = [
   {
@@ -116,6 +117,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Vedtægt — Digitalt bestyrelsesrum til danske foreninger"
+        description="Professionelt bestyrelsesværktøj til danske foreninger. Møder, referater, afstemninger og dokumenter samlet ét sted. GDPR-korrekt fra dag ét."
+        path="/"
+      />
       {/* Header */}
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-50">
         <div className="container flex h-14 items-center justify-between">

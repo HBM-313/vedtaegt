@@ -1,8 +1,15 @@
 import { Link } from "react-router-dom";
 import { Shield } from "lucide-react";
+import PageSeo from "@/components/PageSeo";
 
 const DpaPage = () => (
   <div className="min-h-screen bg-background">
+    <PageSeo
+      title="Databehandleraftale | Vedtægt"
+      description="Vedtægts standard databehandleraftale efter GDPR. Beskriver databehandling, underdatabehandlere og sikkerhed for danske foreninger."
+      path="/dpa"
+      ogType="article"
+    />
     <header className="border-b border-border">
       <div className="container flex h-14 items-center">
         <Link to="/" className="flex items-center gap-2">

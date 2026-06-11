@@ -1,0 +1,17 @@
+# Vedtægt
+
+> Digitalt bestyrelsesrum til danske foreninger — møder, referater, dokumenter og handlingspunkter samlet ét sted. GDPR-korrekt fra dag ét.
+
+Vedtægt er en dansk SaaS-platform til bestyrelsesarbejde i frivillige foreninger (idrætsklubber, ejerforeninger, andelsforeninger, kulturforeninger og paraplyorganisationer). Den erstatter Word-filer, e-mail-bilag og fildelingstjenester med et struktureret system til møder, referater, dokumentarkivering og handlingspunkter. Data opbevares på EU-servere (Frankfurt).
+
+## Pages
+
+- [Forside](/): Produktoversigt, funktioner, prissætning og kom-i-gang
+- [Opret konto](/opret-konto): Opret gratis forening
+- [Log ind](/login): Login for eksisterende brugere
+- [Guide: Dagsorden til bestyrelsesmøde](/guide/dagsorden-bestyrelsesmoede): Praktisk guide til en god dagsorden
+
+## Optional
+
+- [Databehandleraftale](/dpa): GDPR-databehandleraftale og underdatabehandlere
+- [Privatlivspolitik](/privatlivspolitik): Hvilke data vi behandler og dine rettigheder

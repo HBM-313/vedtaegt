@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Shield, ArrowLeft, Info, Mail, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
+import PageSeo from "@/components/PageSeo";
 import { useDawaPostnummer } from "@/hooks/useDawaPostnummer";
 import { useCvrLookup } from "@/hooks/useCvrLookup";
 
@@ -244,6 +245,11 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
+      <PageSeo
+        title="Opret gratis forening | Vedtægt"
+        description="Opret din forening på Vedtægt på under to minutter. Gratis plan, ingen kreditkort. Møder, referater og dokumenter samlet ét sted."
+        path="/opret-konto"
+      />
       <div className="w-full max-w-md p-8">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-8">
