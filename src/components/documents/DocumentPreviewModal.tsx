@@ -118,7 +118,7 @@ const DocumentPreviewModal = ({ doc, onClose }: Props) => {
         <div className="flex items-center justify-center max-h-[70vh] overflow-auto">
           <img
             src={signedUrl}
-            alt={doc.name}
+            alt={`Forhåndsvisning af dokumentet ${doc.name}`}
             className="max-w-full max-h-[70vh] object-contain rounded-md"
           />
         </div>

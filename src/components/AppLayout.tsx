@@ -105,23 +105,42 @@ function AppSidebar() {
               to="/profil"
               className="flex items-center gap-2 text-xs text-sidebar-foreground hover:text-sidebar-primary transition-colors"
               activeClassName="text-sidebar-primary font-medium"
+              aria-label="Min profil"
             >
-              <User className="h-3.5 w-3.5" />
+              <User className="h-3.5 w-3.5" aria-hidden="true" />
               <span className="truncate">{memberName || "Min profil"}</span>
             </NavLink>
             <div className="flex justify-end">
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleLogout}>
-                <LogOut className="h-3.5 w-3.5" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={handleLogout}
+                aria-label="Log ud"
+              >
+                <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-2 flex flex-col items-center">
-            <NavLink to="/profil" className="hover:text-sidebar-primary" activeClassName="text-sidebar-primary">
-              <User className="h-3.5 w-3.5" />
+            <NavLink
+              to="/profil"
+              className="hover:text-sidebar-primary"
+              activeClassName="text-sidebar-primary"
+              aria-label="Min profil"
+            >
+              <User className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="sr-only">Min profil</span>
             </NavLink>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleLogout}>
-              <LogOut className="h-3.5 w-3.5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleLogout}
+              aria-label="Log ud"
+            >
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </div>
         )}
