@@ -46,6 +46,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    const ALLOWED_ROLES = ["naestformand", "kasserer", "bestyrelsesmedlem", "suppleant"];
+    if (!ALLOWED_ROLES.includes(role)) {
+      return new Response(JSON.stringify({ error: "Ugyldig rolle. Formandsposten kan kun overdrages via overdragelsesflowet." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     // Check caller is member of org with invite permission
     const { data: callerMember } = await supabase
       .from("members")
