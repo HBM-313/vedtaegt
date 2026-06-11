@@ -134,52 +134,49 @@ const ApprovalPage = () => {
     setSubmitting(true);
     try {
       const now = new Date().toISOString();
-      const { error } = await supabase.from("approvals").update({
-        status: "godkendt",
-        approved_at: now,
-        ip_address: "web-client",
-        token: null,
-      }).eq("id", data.id);
+      const { data: rpcRes, error } = await supabase.rpc("approve_meeting_with_token", {
+        _token: token,
+        _ip: "web-client",
+      });
       if (error) throw error;
+      const r = (rpcRes ?? {}) as { error?: string; ok?: boolean };
+      if (r.error) throw new Error(r.error);
 
-      // Check if all approved
-      const { data: allApprovals } = await supabase
-        .from("approvals")
-        .select("id, status, approved_at, member_id, members!approvals_member_id_fkey(name, role)")
-        .eq("meeting_id", data.meeting_id);
-
-      if (allApprovals) {
-        const allDone = allApprovals.every((a) => a.status === "godkendt");
-        if (allDone) {
-          await supabase.from("meetings").update({ status: "approved", approved_at: now }).eq("id", data.meeting_id);
-
-          // Send all_approved email to formand/næstformand
-          const leaders = await supabase.from("members")
-            .select("email, name").eq("org_id", data.org_id)
-            .in("role", ["formand", "naestformand"]);
-
-          if (leaders.data) {
-            for (const leader of leaders.data) {
-              await supabase.functions.invoke("send-email", {
-                body: {
-                  to: leader.email,
-                  templateName: "all_approved",
-                  templateData: {
-                    meetingTitle: data.meeting.title,
-                    meetingId: data.meeting_id,
-                    approvalCount: allApprovals.length,
-                    approvals: allApprovals.map((a) => ({
-                      name: (a.members as { name: string; role: string } | null)?.name || "Ukendt",
-                      role: getRoleLabel((a.members as { name: string; role: string } | null)?.role || ""),
-                      date: a.approved_at ? new Intl.DateTimeFormat("da-DK", {
-                        day: "numeric", month: "short", year: "numeric",
-                        hour: "2-digit", minute: "2-digit",
-                      }).format(new Date(a.approved_at)) : "",
-                    })),
-                  },
+      const { data: finRows } = await supabase.rpc("finalize_meeting_if_all_approved", {
+        _meeting_id: data.meeting_id,
+      });
+      const finRow = (Array.isArray(finRows) ? finRows[0] : finRows) as unknown as
+        | { finalized: boolean; approvals: unknown }
+        | null;
+      const fin = finRow
+        ? { finalized: finRow.finalized, approvals: (finRow.approvals as Array<{ name: string; role: string; approved_at: string }> | null) }
+        : null;
+      if (fin?.finalized) {
+        const leaders = await supabase.from("members")
+          .select("email, name").eq("org_id", data.org_id)
+          .in("role", ["formand", "naestformand"]);
+        const approvalsList = fin.approvals || [];
+        if (leaders.data) {
+          for (const leader of leaders.data) {
+            await supabase.functions.invoke("send-email", {
+              body: {
+                to: leader.email,
+                templateName: "all_approved",
+                templateData: {
+                  meetingTitle: data.meeting.title,
+                  meetingId: data.meeting_id,
+                  approvalCount: approvalsList.length,
+                  approvals: approvalsList.map((a) => ({
+                    name: a.name || "Ukendt",
+                    role: getRoleLabel(a.role || ""),
+                    date: a.approved_at ? new Intl.DateTimeFormat("da-DK", {
+                      day: "numeric", month: "short", year: "numeric",
+                      hour: "2-digit", minute: "2-digit",
+                    }).format(new Date(a.approved_at)) : "",
+                  })),
                 },
-              });
-            }
+              },
+            });
           }
         }
       }
@@ -198,22 +195,14 @@ const ApprovalPage = () => {
     if (!data || !token || rejectComment.length < 10) return;
     setSubmitting(true);
     try {
-      // 1. Update this approval
-      await supabase.from("approvals").update({
-        status: "afvist",
-        afvist_kommentar: rejectComment,
-        token: null,
-      }).eq("id", data.id);
+      const { data: rpcRes, error } = await supabase.rpc("reject_meeting_with_token", {
+        _token: token,
+        _kommentar: rejectComment,
+      });
+      if (error) throw error;
+      const r = (rpcRes ?? {}) as { error?: string };
+      if (r.error) throw new Error(r.error);
 
-      // 2. Set meeting back to active
-      await supabase.from("meetings").update({
-        status: "active",
-        afvist_af: data.member_id,
-        afvist_at: new Date().toISOString(),
-        afvist_kommentar: rejectComment,
-      }).eq("id", data.meeting_id);
-
-      // 3. Send rejection notification to formand/næstformand
       const leaders = await supabase.from("members")
         .select("email, name").eq("org_id", data.org_id)
         .in("role", ["formand", "naestformand"]);

@@ -1086,10 +1086,28 @@ export type Database = {
         }
         Returns: boolean
       }
+      accept_ownership_transfer: { Args: { _token: string }; Returns: Json }
+      approve_meeting_in_platform: {
+        Args: { _meeting_id: string }
+        Returns: Json
+      }
+      approve_meeting_with_token: {
+        Args: { _ip?: string; _token: string }
+        Returns: Json
+      }
       caller_effective_role: { Args: { _org_id: string }; Returns: string }
       caller_has_permission: {
         Args: { _flag: string; _org_id: string }
         Returns: boolean
+      }
+      finalize_meeting_if_all_approved: {
+        Args: { _meeting_id: string }
+        Returns: {
+          approvals: Json
+          finalized: boolean
+          meeting_title: string
+          org_id: string
+        }[]
       }
       get_foreningsmedlem_emails: {
         Args: { _org_id: string }
@@ -1199,6 +1217,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      reject_meeting_in_platform: {
+        Args: { _kommentar: string; _meeting_id: string }
+        Returns: Json
+      }
+      reject_meeting_with_token: {
+        Args: { _kommentar: string; _token: string }
+        Returns: Json
       }
       start_meeting_approval: {
         Args: { _frist_dage: number; _meeting_id: string }
