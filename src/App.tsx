@@ -29,6 +29,7 @@ import VedtaegterPage from "./pages/VedtaegterPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import MedlemsregisterPage from "./pages/MedlemsregisterPage";
 import SharedReferatPage from "./pages/SharedReferatPage";
+import GuideDagsordenBestyrelsesmoede from "./pages/GuideDagsordenBestyrelsesmoede";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/invitation/:token" element={<InvitationAccept />} />
           <Route path="/dpa" element={<DpaPage />} />
           <Route path="/privatlivspolitik" element={<PrivacyPage />} />
+          <Route path="/guide/dagsorden-bestyrelsesmoede" element={<GuideDagsordenBestyrelsesmoede />} />
 
           {/* Protected routes */}
           <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
