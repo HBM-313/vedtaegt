@@ -145,9 +145,12 @@ const ApprovalPage = () => {
       const { data: finRows } = await supabase.rpc("finalize_meeting_if_all_approved", {
         _meeting_id: data.meeting_id,
       });
-      const fin = (Array.isArray(finRows) ? finRows[0] : finRows) as
-        | { finalized: boolean; approvals: Array<{ name: string; role: string; approved_at: string }> | null }
+      const finRow = (Array.isArray(finRows) ? finRows[0] : finRows) as unknown as
+        | { finalized: boolean; approvals: unknown }
         | null;
+      const fin = finRow
+        ? { finalized: finRow.finalized, approvals: (finRow.approvals as Array<{ name: string; role: string; approved_at: string }> | null) }
+        : null;
       if (fin?.finalized) {
         const leaders = await supabase.from("members")
           .select("email, name").eq("org_id", data.org_id)
