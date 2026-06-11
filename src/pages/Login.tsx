@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
+import PageSeo from "@/components/PageSeo";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -30,6 +31,12 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
+      <PageSeo
+        title="Log ind | Vedtægt"
+        description="Log ind på Vedtægt og få adgang til din forenings bestyrelsesrum med møder, referater og dokumenter."
+        path="/login"
+        noindex
+      />
       <div className="w-full max-w-sm p-8">
         <div className="flex items-center gap-2 mb-8">
           <Shield className="h-5 w-5 text-primary" />

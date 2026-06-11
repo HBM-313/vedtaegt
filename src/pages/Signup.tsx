@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Shield, ArrowLeft, Info, Mail, RefreshCw, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, Link } from "react-router-dom";
+import PageSeo from "@/components/PageSeo";
 import { useDawaPostnummer } from "@/hooks/useDawaPostnummer";
 import { useCvrLookup } from "@/hooks/useCvrLookup";
 

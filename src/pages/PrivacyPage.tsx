@@ -1,8 +1,15 @@
 import { Link } from "react-router-dom";
 import { Shield } from "lucide-react";
+import PageSeo from "@/components/PageSeo";
 
 const PrivacyPage = () => (
   <div className="min-h-screen bg-background">
+    <PageSeo
+      title="Privatlivspolitik | Vedtægt"
+      description="Hvilke personoplysninger Vedtægt behandler, dit retsgrundlag, dine rettigheder efter GDPR og hvordan du kontakter os."
+      path="/privatlivspolitik"
+      ogType="article"
+    />
     <header className="border-b border-border">
       <div className="container flex h-14 items-center">
         <Link to="/" className="flex items-center gap-2">
