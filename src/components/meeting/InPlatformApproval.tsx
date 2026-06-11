@@ -79,27 +79,19 @@ const InPlatformApproval = ({
   const handleApprove = async () => {
     setSubmitting(true);
     try {
-      const now = new Date().toISOString();
-      await supabase.from("approvals").update({
-        status: "godkendt",
-        approved_at: now,
-      }).eq("id", myApproval.id);
-
-      await logAuditEvent("meeting.referat_godkendt", "meeting", meetingId, {
-        member_id: currentMemberId,
-        kilde: "platform",
-        runde: godkendelseRunde || 1,
+      const { error: rpcErr } = await supabase.rpc("approve_meeting_in_platform", {
+        _meeting_id: meetingId,
       });
+      if (rpcErr) throw rpcErr;
 
-      // Check if all approved
-      const { data: allApprovals } = await supabase
-        .from("approvals")
-        .select("id, status, approved_at, member_id, members!approvals_member_id_fkey(name, role)")
-        .eq("meeting_id", meetingId);
-
-      if (allApprovals?.every(a => a.status === "godkendt")) {
-        await supabase.from("meetings").update({ status: "approved", approved_at: now }).eq("id", meetingId);
-
+      const { data: finRows } = await supabase.rpc("finalize_meeting_if_all_approved", {
+        _meeting_id: meetingId,
+      });
+      const finRow = (Array.isArray(finRows) ? finRows[0] : finRows) as unknown as
+        | { finalized: boolean; approvals: unknown }
+        | null;
+      if (finRow?.finalized) {
+        const approvalsList = (finRow.approvals as Array<{ name: string; role: string; approved_at: string }> | null) || [];
         const leaders = await supabase.from("members")
           .select("email, name").eq("org_id", orgId).in("role", ["formand", "naestformand"]);
 
@@ -112,10 +104,10 @@ const InPlatformApproval = ({
                 templateData: {
                   meetingTitle,
                   meetingId,
-                  approvalCount: allApprovals.length,
-                  approvals: allApprovals.map(a => ({
-                    name: (a.members as any)?.name || "Ukendt",
-                    role: getRoleLabel((a.members as any)?.role || ""),
+                  approvalCount: approvalsList.length,
+                  approvals: approvalsList.map((a) => ({
+                    name: a.name || "Ukendt",
+                    role: getRoleLabel(a.role || ""),
                     date: a.approved_at ? new Intl.DateTimeFormat("da-DK", {
                       day: "numeric", month: "short", year: "numeric",
                       hour: "2-digit", minute: "2-digit",
@@ -143,19 +135,12 @@ const InPlatformApproval = ({
     if (rejectComment.length < 10) return;
     setSubmitting(true);
     try {
-      await supabase.from("approvals").update({
-        status: "afvist",
-        afvist_kommentar: rejectComment,
-      }).eq("id", myApproval.id);
+      const { error: rpcErr } = await supabase.rpc("reject_meeting_in_platform", {
+        _meeting_id: meetingId,
+        _kommentar: rejectComment,
+      });
+      if (rpcErr) throw rpcErr;
 
-      await supabase.from("meetings").update({
-        status: "active",
-        afvist_af: currentMemberId,
-        afvist_at: new Date().toISOString(),
-        afvist_kommentar: rejectComment,
-      }).eq("id", meetingId);
-
-      // Notify formand/næstformand
       const leaders = await supabase.from("members")
         .select("email, name").eq("org_id", orgId).in("role", ["formand", "naestformand"]);
 
@@ -180,13 +165,6 @@ const InPlatformApproval = ({
         }
       }
 
-      await logAuditEvent("meeting.referat_afvist", "meeting", meetingId, {
-        afvist_af_navn: myMember?.name,
-        kommentar: rejectComment,
-        kilde: "platform",
-        runde: godkendelseRunde || 1,
-      });
-
       toast.success("Referatet er afvist. Formanden er notificeret.");
       setShowReject(false);
       setRejectComment("");
@@ -197,6 +175,7 @@ const InPlatformApproval = ({
       setSubmitting(false);
     }
   };
+
 
   return (
     <>
