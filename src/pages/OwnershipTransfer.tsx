@@ -66,43 +66,22 @@ const OwnershipTransfer = () => {
     setAccepting(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Get current owner member and new owner member
-    const { data: fromMember } = await supabase
-      .from("members")
-      .select("id")
-      .eq("id", transfer.from_member_id)
-      .single();
-
-    const { data: toMember } = await supabase
-      .from("members")
-      .select("id")
-      .eq("org_id", transfer.org_id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!fromMember || !toMember) {
-      toast.error("Kunne ikke finde medlemsdata.");
+    if (!user) {
       setAccepting(false);
       return;
     }
 
-    // Demote old formand to bestyrelsesmedlem
-    await supabase.from("members").update({ role: "bestyrelsesmedlem" }).eq("id", fromMember.id);
-    // Promote new formand
-    await supabase.from("members").update({ role: "formand" }).eq("id", toMember.id);
-    // Mark transfer as accepted
-    await supabase.from("ownership_transfers").update({ accepted_at: new Date().toISOString() }).eq("id", transfer.id);
-
-    await logAuditEvent("org.ownership_transferred", "ownership_transfer", transfer.id, {
-      from_member_id: fromMember.id,
-      to_member_id: toMember.id,
-    });
+    const { error: rpcErr } = await supabase.rpc("accept_ownership_transfer", { _token: token! });
+    if (rpcErr) {
+      toast.error(rpcErr.message || "Kunne ikke acceptere overdragelsen.");
+      setAccepting(false);
+      return;
+    }
 
     toast.success(`Du er nu ejer af ${orgName}`);
     navigate("/dashboard");
   };
+
 
   if (loading) {
     return (
