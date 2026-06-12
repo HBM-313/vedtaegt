@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Shield, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
+import PageSeo from "@/components/PageSeo";
 
 const ResetPassword = () => {
   const [email, setEmail] = useState("");
@@ -70,6 +71,12 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
+      <PageSeo
+        title="Nulstil adgangskode | Vedtægt"
+        description="Glemt din adgangskode til Vedtægt? Indtast din e-mail og modtag et sikkert link til at nulstille adgangskoden."
+        path="/nulstil-adgangskode"
+        noindex
+      />
       <div className="w-full max-w-sm p-8">
         <div className="flex items-center gap-2 mb-8">
           <Shield className="h-5 w-5 text-primary" />
