@@ -318,7 +318,7 @@ const ApprovalPage = () => {
             return (
               <div key={i} className="ring-1 ring-border rounded-sm">
                 <div className="p-4 border-b border-border">
-                  <h3 className="text-sm font-semibold">{i + 1}. {item.title}</h3>
+                  <h2 className="text-sm font-semibold">{i + 1}. {item.title}</h2>
                 </div>
                 <div className="p-4 space-y-3">
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">

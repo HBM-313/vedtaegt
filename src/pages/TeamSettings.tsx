@@ -279,7 +279,7 @@ const TeamSettings = () => {
                         {m.id !== memberId && m.role !== "formand" && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" aria-label={`Handlinger for ${m.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {perms.erFormand && m.role !== "formand" && INVITABLE_ROLES.map((r) => (
