@@ -5,6 +5,7 @@ import { Shield, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import PageSeo from "@/components/PageSeo";
 
 interface Meeting {
   id: string;
@@ -179,6 +180,13 @@ const SharedReferatPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title={`${meeting?.title || "Referat"}${orgName ? ` — ${orgName}` : ""} | Vedtægt`}
+        description={`Offentliggjort referat fra ${meeting?.title || "møde"}${orgName ? ` i ${orgName}` : ""}. Læs dagsorden, beslutninger og afstemninger.`}
+        path={`/referat/${token}`}
+        ogType="article"
+        noindex
+      />
       <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">

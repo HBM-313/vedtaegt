@@ -8,6 +8,7 @@ import { Shield, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { getRoleLabel } from "@/lib/roles";
 import { toast } from "sonner";
+import PageSeo from "@/components/PageSeo";
 
 interface ApprovalData {
   id: string;
@@ -289,6 +290,12 @@ const ApprovalPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title={`Godkend referat: ${data!.meeting.title} | Vedtægt`}
+        description={`Gennemlæs og godkend referatet fra ${data!.meeting.title} i ${data!.meeting.org_name}. Sikker digital godkendelse via Vedtægt.`}
+        path={`/godkend/${token}`}
+        noindex
+      />
       <header className="border-b border-border">
         <div className="container flex h-14 items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
@@ -318,7 +325,7 @@ const ApprovalPage = () => {
             return (
               <div key={i} className="ring-1 ring-border rounded-sm">
                 <div className="p-4 border-b border-border">
-                  <h3 className="text-sm font-semibold">{i + 1}. {item.title}</h3>
+                  <h2 className="text-sm font-semibold">{i + 1}. {item.title}</h2>
                 </div>
                 <div className="p-4 space-y-3">
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap">

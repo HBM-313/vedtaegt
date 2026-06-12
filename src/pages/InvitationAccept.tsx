@@ -223,7 +223,7 @@ const InvitationAccept = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h2 className="text-lg font-semibold">Opret din profil</h2>
+          <h1 className="text-lg font-semibold">Opret din profil</h1>
 
           <div className="space-y-2">
             <Label htmlFor="name" className="text-xs">Fulde navn</Label>
