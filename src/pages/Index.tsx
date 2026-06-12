@@ -329,6 +329,9 @@ const Index = () => {
           </Button>
         </div>
       </section>
+      </main>
+
+
 
       {/* Footer */}
       <footer className="border-t border-border">
