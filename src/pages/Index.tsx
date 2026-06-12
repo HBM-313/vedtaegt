@@ -140,6 +140,7 @@ const Index = () => {
         </div>
       </header>
 
+      <main>
       {/* Hero */}
       <section className="border-b border-border">
         <div className="container py-20 md:py-32 text-center">
@@ -328,6 +329,9 @@ const Index = () => {
           </Button>
         </div>
       </section>
+      </main>
+
+
 
       {/* Footer */}
       <footer className="border-t border-border">
